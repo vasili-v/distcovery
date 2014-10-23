@@ -1,0 +1,4 @@
+distcovery
+==========
+
+The library provides command "test" for distutils setup. The command allows to run tests all together or individually and calculate test coverage.
