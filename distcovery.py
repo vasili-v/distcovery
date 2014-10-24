@@ -1,3 +1,4 @@
 class Test(object):
-    pass
+    def collect_modules(self):
+        self.test_modules = {}
 
