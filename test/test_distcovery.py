@@ -1,12 +1,13 @@
 import unittest
 import os
+import re
 
 from distutils.cmd import Command
 from distutils.dist import Distribution
 
 from mocks import mock_directory_tree
 
-from distcovery import _make_name, Test
+from distcovery import _make_name, _sub_item, Test
 
 class TestDistcovery(unittest.TestCase):
     def setUp(self):
@@ -25,6 +26,11 @@ class TestDistcovery(unittest.TestCase):
 
     def test__make_name(self):
         self.assertEqual(_make_name(('xxx', 'yyy', 'zzz')), 'xxx.yyy.zzz')
+
+    def test__sub_item(self):
+        match = re.match('(test_([0-9A-Za-z_]+))', 'test_sub_item')
+        self.assertEqual(_sub_item(('item',), ('test_item',), match),
+                         (('item', 'sub_item'), ('test_item', 'test_sub_item')))
 
     def test_class_attributes(self):
         self.assertTrue(issubclass(Test, Command))

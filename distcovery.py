@@ -9,11 +9,11 @@ _TEST_MODULE_NAME_REGEX = re.compile('^(test_([a-zA-Z0-9_]+))\\.py$')
 def _make_name(sequence):
     return '.'.join(sequence)
 
+def _sub_item(alias, package, match):
+    return (alias + (match.group(2),), package + (match.group(1),))
+
 class Test(Command):
     def collect_modules(self):
-        def sub_item(alias, package, match):
-            return (alias + (match.group(2),), package + (match.group(1),))
-
         def walk(path, alias, package):
             if not os.path.isfile(os.path.join(path, '__init__.py')):
                 return
@@ -24,14 +24,14 @@ class Test(Command):
                 match = _TEST_PACKAGE_NAME_REGEX.match(name)
                 if match:
                     if os.path.isdir(sub_path):
-                        sub_alias, sub_package = sub_item(alias, package, match)
+                        sub_alias, sub_package = _sub_item(alias, package, match)
                         for module in walk(sub_path, sub_alias, sub_package):
                             yield module
 
                 else:
                     match = _TEST_MODULE_NAME_REGEX.match(name)
                     if match and os.path.isfile(sub_path):
-                        yield sub_item(alias, package, match)
+                        yield _sub_item(alias, package, match)
 
         modules = []
         for alias, module in walk(self.test_root, tuple(), tuple()):
