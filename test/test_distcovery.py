@@ -1,44 +1,12 @@
 import unittest
 import os
-import errno
 
 from distutils.cmd import Command
 from distutils.dist import Distribution
 
+from mocks import mock_directory_tree
+
 from distcovery import Test
-
-def _mock_directory_tree(tree):
-    tree = dict([(os.path.join(*key), value) \
-                      for key, value in tree.iteritems()])
-
-    def listdir(path):
-        try:
-            names = tree[path]
-        except KeyError:
-            raise OSError(errno.ENOENT, os.strerror(errno.ENOENT), path)
-
-        if names is None:
-            raise OSError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), path)
-
-        return names
-
-    def isfile(path):
-        try:
-            item = tree[path]
-        except KeyError:
-            return False
-
-        return item is None
-
-    def isdir(path):
-        try:
-            item = tree[path]
-        except KeyError:
-            return False
-
-        return item is not None
-
-    return listdir, isfile, isdir
 
 class TestDistcovery(unittest.TestCase):
     def setUp(self):
@@ -63,7 +31,7 @@ class TestDistcovery(unittest.TestCase):
         self.assertTrue(isinstance(test, Test))
 
     def test_collect_modules_empty(self):
-        os.listdir, os.path.isfile, os.path.isdir = _mock_directory_tree({})
+        os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree({})
 
         test = Test(Distribution())
         test.test_root = '.'
@@ -97,7 +65,7 @@ class TestDistcovery(unittest.TestCase):
                 ('.', 'test_sub_third', 'test_sub_second',
                  't_sub_second.py'): None}
 
-        os.listdir, os.path.isfile, os.path.isdir = _mock_directory_tree(tree)
+        os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree(tree)
 
         test = Test(Distribution())
         test.test_root = '.'
