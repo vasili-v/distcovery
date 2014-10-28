@@ -20,25 +20,29 @@ def _sub_item(alias, package, match):
     return alias + (match.group(_TEST_ALIAS),), \
            package + (match.group(_TEST_NAME),)
 
+def _is_package(path):
+    return os.path.isdir(path) and \
+           os.path.isfile(os.path.join(path, '__init__.py'))
+
+def _is_module(path):
+    return os.path.isfile(path)
+
 class Test(Command):
     def collect_modules(self):
         def walk(path, alias, package):
-            if not os.path.isfile(os.path.join(path, '__init__.py')):
-                return
-
             for name in os.listdir(path):
                 sub_path = os.path.join(path, name)
 
                 match = _TEST_PACKAGE_COMPILED_REGEX.match(name)
                 if match:
-                    if os.path.isdir(sub_path):
+                    if _is_package(sub_path):
                         sub_alias, sub_package = _sub_item(alias, package, match)
                         for module in walk(sub_path, sub_alias, sub_package):
                             yield module
 
                 else:
                     match = _TEST_MODULE_COMPILED_REGEX.match(name)
-                    if match and os.path.isfile(sub_path):
+                    if match and _is_module(sub_path):
                         yield _sub_item(alias, package, match)
 
         modules = []

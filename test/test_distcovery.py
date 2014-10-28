@@ -7,9 +7,35 @@ from distutils.dist import Distribution
 
 from mocks import mock_directory_tree
 
-from distcovery import _TEST_PACKAGE_REGEX, _make_name, _sub_item, Test
+from distcovery import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
+                       _is_package, _is_module, Test
 
-class TestDistcovery(unittest.TestCase):
+class PreserveOs(object):
+    def setUp(self):
+        super(PreserveOs, self).setUp()
+
+        self.__listdir = os.listdir
+        self.__isfile = os.path.isfile
+        self.__isdir = os.path.isdir
+
+    def tearDown(self):
+        os.path.isdir = self.__isdir
+        os.path.isfile = self.__isfile
+        os.listdir = self.__listdir
+
+        super(PreserveOs, self).tearDown()
+
+class TestDistcovery(PreserveOs, unittest.TestCase):
+    def __arbitrary_tree(self):
+        tree = {('test_first.py',): None,
+                ('test_second',): tuple(),
+                ('test_third',): ('__init__.py', 'test_item.py'),
+                ('test_third', '__init__.py'): None,
+                ('test_third', 'test_item.py'): None,
+                ('test_forth',): ('module.py',),
+                ('test_forth', 'module.py'): None}
+        os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree(tree)
+
     def test__make_name(self):
         self.assertEqual(_make_name(('xxx', 'yyy', 'zzz')), 'xxx.yyy.zzz')
 
@@ -18,21 +44,25 @@ class TestDistcovery(unittest.TestCase):
         self.assertEqual(_sub_item(('item',), ('test_item',), match),
                          (('item', 'sub_item'), ('test_item', 'test_sub_item')))
 
-class TestDistcoveryTest(unittest.TestCase):
-    def setUp(self):
-        super(TestDistcoveryTest, self).setUp()
+    def test__is_package(self):
+        self.__arbitrary_tree()
 
-        self.listdir = os.listdir
-        self.isfile = os.path.isfile
-        self.isdir = os.path.isdir
+        self.assertFalse(_is_package('test_first.py'))
+        self.assertFalse(_is_package('test_second'))
+        self.assertTrue(_is_package('test_third'))
+        self.assertFalse(_is_package('test_forth'))
+        self.assertFalse(_is_package('test_fifth'))
 
-    def tearDown(self):
-        os.path.isdir = self.isdir
-        os.path.isfile = self.isfile
-        os.listdir = self.listdir
+    def test__is_module(self):
+        self.__arbitrary_tree()
 
-        super(TestDistcoveryTest, self).tearDown()
+        self.assertTrue(_is_module('test_first.py'))
+        self.assertFalse(_is_module('test_second'))
+        self.assertFalse(_is_module('test_third'))
+        self.assertFalse(_is_module('test_forth'))
+        self.assertFalse(_is_module('test_fifth'))
 
+class TestDistcoveryTest(PreserveOs, unittest.TestCase):
     def test_class_attributes(self):
         self.assertTrue(issubclass(Test, Command))
 
@@ -41,7 +71,8 @@ class TestDistcoveryTest(unittest.TestCase):
         self.assertTrue(isinstance(test, Test))
 
     def test_collect_modules_empty(self):
-        os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree({})
+        tree = {('.',): tuple()}
+        os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree(tree)
 
         test = Test(Distribution())
         test.test_root = '.'
