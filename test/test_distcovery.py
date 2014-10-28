@@ -6,7 +6,7 @@ from distutils.dist import Distribution
 
 from mocks import mock_directory_tree
 
-from distcovery import Test
+from distcovery import _make_name, Test
 
 class TestDistcovery(unittest.TestCase):
     def setUp(self):
@@ -22,6 +22,9 @@ class TestDistcovery(unittest.TestCase):
         os.listdir = self.listdir
 
         super(TestDistcovery, self).tearDown()
+
+    def test__make_name(self):
+        self.assertEqual(_make_name(('xxx', 'yyy', 'zzz')), 'xxx.yyy.zzz')
 
     def test_class_attributes(self):
         self.assertTrue(issubclass(Test, Command))

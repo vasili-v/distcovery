@@ -6,11 +6,11 @@ from distutils.cmd import Command
 _TEST_PACKAGE_NAME_REGEX = re.compile('^(test_([a-zA-Z0-9_]+))$')
 _TEST_MODULE_NAME_REGEX = re.compile('^(test_([a-zA-Z0-9_]+))\\.py$')
 
+def _make_name(sequence):
+    return '.'.join(sequence)
+
 class Test(Command):
     def collect_modules(self):
-        def import_string(sequence):
-            return '.'.join(sequence)
-
         def sub_item(alias, package, match):
             return (alias + (match.group(2),), package + (match.group(1),))
 
@@ -35,7 +35,7 @@ class Test(Command):
 
         modules = []
         for alias, module in walk(self.test_root, tuple(), tuple()):
-            modules.append((import_string(alias), import_string(module)))
+            modules.append((_make_name(alias), _make_name(module)))
 
         self.test_modules = dict(modules)
 
