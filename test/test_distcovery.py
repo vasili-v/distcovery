@@ -2,6 +2,9 @@ import unittest
 import os
 import errno
 
+from distutils.cmd import Command
+from distutils.dist import Distribution
+
 from distcovery import Test
 
 def _mock_directory_tree(tree):
@@ -52,14 +55,17 @@ class TestDistcovery(unittest.TestCase):
 
         super(TestDistcovery, self).tearDown()
 
+    def test_class_attributes(self):
+        self.assertTrue(issubclass(Test, Command))
+
     def test_creation(self):
-        test = Test()
+        test = Test(Distribution())
         self.assertTrue(isinstance(test, Test))
 
     def test_collect_modules_empty(self):
         os.listdir, os.path.isfile, os.path.isdir = _mock_directory_tree({})
 
-        test = Test()
+        test = Test(Distribution())
         test.test_root = '.'
         test.collect_modules()
         self.assertTrue(hasattr(test, 'test_modules'))
@@ -93,7 +99,7 @@ class TestDistcovery(unittest.TestCase):
 
         os.listdir, os.path.isfile, os.path.isdir = _mock_directory_tree(tree)
 
-        test = Test()
+        test = Test(Distribution())
         test.test_root = '.'
         test.collect_modules()
         self.assertTrue(hasattr(test, 'test_modules'))

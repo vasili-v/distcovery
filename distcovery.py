@@ -1,10 +1,12 @@
 import os
 import re
 
+from distutils.cmd import Command
+
 _TEST_PACKAGE_NAME_REGEX = re.compile('^(test_([a-zA-Z0-9_]+))$')
 _TEST_MODULE_NAME_REGEX = re.compile('^(test_([a-zA-Z0-9_]+))\\.py$')
 
-class Test(object):
+class Test(Command):
     def collect_modules(self):
         def import_string(sequence):
             return '.'.join(sequence)
@@ -36,4 +38,7 @@ class Test(object):
             modules.append((import_string(alias), import_string(module)))
 
         self.test_modules = dict(modules)
+
+    def initialize_options(self):
+        pass
 
