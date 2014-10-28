@@ -1,6 +1,7 @@
 import unittest
 import os
 import re
+import collections
 
 from distutils.cmd import Command
 from distutils.dist import Distribution
@@ -8,7 +9,7 @@ from distutils.dist import Distribution
 from mocks import mock_directory_tree
 
 from distcovery import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
-                       _is_package, _is_module, Test
+                       _is_package, _is_module, _listdir, Test
 
 class PreserveOs(object):
     def setUp(self):
@@ -61,6 +62,17 @@ class TestDistcovery(PreserveOs, unittest.TestCase):
         self.assertFalse(_is_module('test_third'))
         self.assertFalse(_is_module('test_forth'))
         self.assertFalse(_is_module('test_fifth'))
+
+    def test__listdir(self):
+        self.__arbitrary_tree()
+
+        generator = _listdir('test_third')
+        self.assertTrue(isinstance(generator, collections.Iterable))
+        self.assertEqual(list(generator),
+                         [(os.path.join('test_third', '__init__.py'),
+                           '__init__.py'),
+                          (os.path.join('test_third', 'test_item.py'),
+                           'test_item.py')])
 
 class TestDistcoveryTest(PreserveOs, unittest.TestCase):
     def test_class_attributes(self):

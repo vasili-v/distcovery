@@ -1,5 +1,6 @@
 import os
 import re
+import itertools
 
 from distutils.cmd import Command
 
@@ -27,12 +28,16 @@ def _is_package(path):
 def _is_module(path):
     return os.path.isfile(path)
 
+def _listdir(path):
+    def expand(name):
+        return os.path.join(path, name), name
+
+    return itertools.imap(expand, os.listdir(path))
+
 class Test(Command):
     def collect_modules(self):
         def walk(path, alias, package):
-            for name in os.listdir(path):
-                sub_path = os.path.join(path, name)
-
+            for sub_path, name in _listdir(path):
                 match = _TEST_PACKAGE_COMPILED_REGEX.match(name)
                 if match:
                     if _is_package(sub_path):
