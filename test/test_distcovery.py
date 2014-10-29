@@ -128,10 +128,22 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
     def test_class_attributes(self):
         self.assertTrue(issubclass(Test, Command))
         self.assertTrue(hasattr(Test, 'description'))
+        self.assertTrue(hasattr(Test, 'user_options'))
+        self.assertTrue(hasattr(Test, 'boolean_options'))
 
     def test_creation(self):
         test = Test(Distribution())
         self.assertTrue(isinstance(test, Test))
+        self.assertEqual(test.module, None)
+        self.assertEqual(test.coverage_base, None)
+        self.assertEqual(test.coverage, None)
+
+    def test_finalize_options(self):
+        test = Test(Distribution())
+        test.distribution.get_command_obj('install').install_purelib = 'test'
+
+        test.finalize_options()
+        self.assertEqual(test.coverage_base, 'test')
 
     def test_collect_modules_empty(self):
         tree = {('.',): tuple()}

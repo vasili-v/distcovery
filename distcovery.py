@@ -55,9 +55,22 @@ def _walk(path):
 class Test(Command):
     description = 'run tests for the package'
 
+    user_options = [('module=', 'm', 'set of test modules to run (several ' \
+                                     'modules can be listed using comma)'),
+                    ('coverage-base', None, 'base installation directory'),
+                    ('coverage', 'c', 'calculate test coverage')]
+
+    boolean_options = ['coverage']
+
     def collect_modules(self):
         self.test_modules = _walk(self.test_root)
 
     def initialize_options(self):
-        pass
+        self.module = None
+        self.coverage_base = None
+        self.coverage = None
+
+    def finalize_options(self):
+        self.set_undefined_options('install',
+                                   ('install_purelib', 'coverage_base'))
 
