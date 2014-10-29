@@ -17,7 +17,7 @@ _TEST_MODULE_COMPILED_REGEX = re.compile('%s$' % _TEST_MODULE_REGEX)
 def _make_name(sequence):
     return '.'.join(sequence)
 
-def _sub_item(alias, package, match):
+def _sub_item(match, alias, package):
     return alias + (match.group(_TEST_ALIAS),), \
            package + (match.group(_TEST_NAME),)
 
@@ -41,14 +41,14 @@ class Test(Command):
                 match = _TEST_PACKAGE_COMPILED_REGEX.match(name)
                 if match:
                     if _is_package(sub_path):
-                        sub_alias, sub_package = _sub_item(alias, package, match)
+                        sub_alias, sub_package = _sub_item(match, alias, package)
                         for module in walk(sub_path, sub_alias, sub_package):
                             yield module
 
                 else:
                     match = _TEST_MODULE_COMPILED_REGEX.match(name)
                     if match and _is_module(sub_path):
-                        yield _sub_item(alias, package, match)
+                        yield _sub_item(match, alias, package)
 
         modules = []
         for alias, module in walk(self.test_root, tuple(), tuple()):

@@ -42,7 +42,7 @@ class TestDistcovery(PreserveOs, unittest.TestCase):
 
     def test__sub_item(self):
         match = re.match(_TEST_PACKAGE_REGEX, 'test_sub_item')
-        self.assertEqual(_sub_item(('item',), ('test_item',), match),
+        self.assertEqual(_sub_item(match, ('item',), ('test_item',)),
                          (('item', 'sub_item'), ('test_item', 'test_sub_item')))
 
     def test__is_package(self):
