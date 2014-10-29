@@ -53,6 +53,8 @@ def _walk(path):
     return dict(_walk_path(path, tuple(), tuple()))
 
 class Test(Command):
+    description = 'run tests for the package'
+
     def collect_modules(self):
         self.test_modules = _walk(self.test_root)
 

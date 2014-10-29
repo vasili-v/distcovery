@@ -127,6 +127,7 @@ class TestDistcovery(PreserveOs, unittest.TestCase):
 class TestDistcoveryTest(PreserveOs, unittest.TestCase):
     def test_class_attributes(self):
         self.assertTrue(issubclass(Test, Command))
+        self.assertTrue(hasattr(Test, 'description'))
 
     def test_creation(self):
         test = Test(Distribution())
