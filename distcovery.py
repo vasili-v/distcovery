@@ -44,10 +44,10 @@ def _walk_path(path, alias, package):
                     yield module
 
         else:
-             match = _TEST_MODULE_COMPILED_REGEX.match(name)
-             if match and _is_module(sub_path):
-                 sub_alias, sub_package = _sub_item(match, alias, package)
-                 yield _make_name(sub_alias), _make_name(sub_package)
+            match = _TEST_MODULE_COMPILED_REGEX.match(name)
+            if match and _is_module(sub_path):
+                sub_alias, sub_package = _sub_item(match, alias, package)
+                yield _make_name(sub_alias), _make_name(sub_package)
 
 def _walk(path):
     return dict(_walk_path(path, tuple(), tuple()))
