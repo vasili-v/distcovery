@@ -34,27 +34,27 @@ def _listdir(path):
 
     return itertools.imap(expand, os.listdir(path))
 
+def _walk_path(path, alias, package):
+    for sub_path, name in _listdir(path):
+        match = _TEST_PACKAGE_COMPILED_REGEX.match(name)
+        if match:
+            if _is_package(sub_path):
+                sub_alias, sub_package = _sub_item(match, alias, package)
+                for module in _walk_path(sub_path, sub_alias, sub_package):
+                    yield module
+
+        else:
+             match = _TEST_MODULE_COMPILED_REGEX.match(name)
+             if match and _is_module(sub_path):
+                 sub_alias, sub_package = _sub_item(match, alias, package)
+                 yield _make_name(sub_alias), _make_name(sub_package)
+
+def _walk(path):
+    return dict(_walk_path(path, tuple(), tuple()))
+
 class Test(Command):
     def collect_modules(self):
-        def walk(path, alias, package):
-            for sub_path, name in _listdir(path):
-                match = _TEST_PACKAGE_COMPILED_REGEX.match(name)
-                if match:
-                    if _is_package(sub_path):
-                        sub_alias, sub_package = _sub_item(match, alias, package)
-                        for module in walk(sub_path, sub_alias, sub_package):
-                            yield module
-
-                else:
-                    match = _TEST_MODULE_COMPILED_REGEX.match(name)
-                    if match and _is_module(sub_path):
-                        yield _sub_item(match, alias, package)
-
-        modules = []
-        for alias, module in walk(self.test_root, tuple(), tuple()):
-            modules.append((_make_name(alias), _make_name(module)))
-
-        self.test_modules = dict(modules)
+        self.test_modules = _walk(self.test_root)
 
     def initialize_options(self):
         pass
