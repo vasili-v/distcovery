@@ -2,6 +2,7 @@ import os
 import re
 import itertools
 
+from distutils import log
 from distutils.cmd import Command
 
 _TEST_UNIT_PREFIX = 'test_'
@@ -69,8 +70,15 @@ class Test(Command):
         self.module = None
         self.coverage_base = None
         self.coverage = None
+        self.test_root = 'test'
 
     def finalize_options(self):
         self.set_undefined_options('install',
                                    ('install_purelib', 'coverage_base'))
+
+    def run(self):
+        log.info('Test suites:')
+        self.collect_modules()
+        for module in self.test_modules:
+            log.info('\t%s', module)
 

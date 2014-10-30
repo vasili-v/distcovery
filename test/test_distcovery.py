@@ -2,7 +2,10 @@ import unittest
 import os
 import re
 import collections
+import sys
+import StringIO
 
+from distutils import log
 from distutils.cmd import Command
 from distutils.dist import Distribution
 
@@ -125,6 +128,20 @@ class TestDistcovery(PreserveOs, unittest.TestCase):
         self.assertEqual(_walk('.'), dict(self.expected_modules))
 
 class TestDistcoveryTest(PreserveOs, unittest.TestCase):
+    def setUp(self):
+        super(TestDistcoveryTest, self).setUp()
+
+        log.set_verbosity(1)
+
+        self.__stdout = sys.stdout
+        self.stdout = StringIO.StringIO()
+        sys.stdout = self.stdout
+
+    def tearDown(self):
+        sys.stdout = self.__stdout
+
+        super(TestDistcoveryTest, self).tearDown()
+
     def test_class_attributes(self):
         self.assertTrue(issubclass(Test, Command))
         self.assertTrue(hasattr(Test, 'description'))
@@ -137,6 +154,7 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
         self.assertEqual(test.module, None)
         self.assertEqual(test.coverage_base, None)
         self.assertEqual(test.coverage, None)
+        self.assertEqual(test.test_root, 'test')
 
     def test_finalize_options(self):
         test = Test(Distribution())
@@ -163,6 +181,21 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
         test.collect_modules()
         self.assertTrue(hasattr(test, 'test_modules'))
         self.assertEqual(test.test_modules, dict(self.expected_modules))
+
+    def test_run(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.run()
+
+        self.assertEqual(self.stdout.getvalue(),
+                         'Test suites:\n' \
+                         '\tsub_third.sub_first\n' \
+                         '\tsecond\n' \
+                         '\tsub_first.sub_first\n' \
+                         '\tsub_third.sub_second.sub_first\n' \
+                         '\tfirst\n')
 
 if __name__ == '__main__':
     unittest.main()
