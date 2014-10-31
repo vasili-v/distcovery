@@ -1,6 +1,8 @@
 import os
 import re
 import itertools
+import unittest
+import sys
 
 from distutils import log
 from distutils.cmd import Command
@@ -27,6 +29,13 @@ class DistcoveryException(Exception):
             return '"%s" and %s' % ('", "'.join(items[:-1]), last), 's'
 
         return last, ''
+
+class InvalidTestRoot(DistcoveryException):
+    template = 'Can\'t run tests outside current directory. ' \
+               'Tests directory: "%(tests)s". Current directory: "%(current)s".'
+
+    def __init__(self, tests, current):
+        super(InvalidTestRoot, self).__init__(tests=tests, current=current)
 
 class NoTestModulesException(DistcoveryException):
     template = 'Couldn\'t find any test module. Make sure that path ' \
@@ -79,8 +88,23 @@ def _walk_path(path, alias, package):
                 sub_alias, sub_package = _sub_item(match, alias, package)
                 yield _make_name(sub_alias), _make_name(sub_package)
 
+def _split_path(path, root):
+    head = path
+    tail = []
+    while head != root:
+        head, name = os.path.split(head)
+        if not name:
+            raise InvalidTestRoot(path, root)
+
+        tail.insert(0, name)
+
+    return tail
+
 def _walk(path):
-    return dict(_walk_path(path, tuple(), tuple()))
+    base = _split_path(os.path.abspath(path), os.getcwd())
+
+    return dict([(alias, _make_name(base + [package])) \
+                     for alias, package in _walk_path(path, tuple(), tuple())])
 
 class Test(Command):
     description = 'run tests for the package'
@@ -126,3 +150,7 @@ class Test(Command):
 
         modules = [item.strip() for item in self.module.split(',')]
         self.validate_modules(modules)
+
+        for module in modules:
+            unittest.main(self.test_modules[module], argv=sys.argv[:1],
+                          exit=False, verbosity=self.verbose)

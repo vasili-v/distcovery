@@ -12,8 +12,9 @@ from distutils.dist import Distribution
 from mocks import mock_directory_tree
 
 from distcovery import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
-                       _is_package, _is_module, _listdir, _walk_path, _walk, \
-                       Test, NoTestModulesException, UnknownModulesException
+                       _is_package, _is_module, _listdir, _walk_path, \
+                       _split_path, _walk, Test, InvalidTestRoot, \
+                       NoTestModulesException, UnknownModulesException
 
 class PreserveOs(object):
     def setUp(self):
@@ -122,6 +123,21 @@ class TestDistcovery(PreserveOs, unittest.TestCase):
         self.assertEqual(tuple(_walk_path('.', tuple(), tuple())),
                          self.expected_modules)
 
+    def test__split_path(self):
+        self.assertEqual(_split_path(os.path.join('1', '2', '3', '4', '5'),
+                                     os.path.join('1', '2')),
+                         ['3', '4', '5'])
+
+    def test__split_path_invalid_root(self):
+        tests = os.path.join('1', '2', '3', '4', '5')
+        current = os.path.join('a', 'b')
+        with self.assertRaises(InvalidTestRoot) as ctx:
+            _split_path(tests, current)
+
+        self.assertEqual(ctx.exception.message,
+                         InvalidTestRoot.template % \
+                         {'tests': tests, 'current': current})
+
     def test__walk(self):
         self.full_test_tree()
 
@@ -137,7 +153,11 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
         self.stdout = StringIO.StringIO()
         sys.stdout = self.stdout
 
+        self.__unittest_main = unittest.main
+
     def tearDown(self):
+        unittest.main = self.__unittest_main
+
         sys.stdout = self.__stdout
 
         super(TestDistcoveryTest, self).tearDown()
@@ -265,12 +285,22 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
     def test_run(self):
         self.full_test_tree()
 
+        arguments = []
+        def main(*args, **kwargs):
+            arguments.append((args, kwargs))
+
+        unittest.main = main
+
         test = Test(Distribution())
         test.test_root = '.'
         test.module = 'first'
         test.run()
 
-        self.assertEqual(self.stdout.getvalue(), '')
+        self.assertEqual(arguments,
+                         [(('test_first',),
+                           {'argv': ['test/test_distcovery.py'],
+                            'exit': False,
+                            'verbosity': 1})])
 
 if __name__ == '__main__':
     unittest.main()
