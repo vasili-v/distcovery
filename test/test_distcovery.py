@@ -298,7 +298,7 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
 
         self.assertEqual(arguments,
                          [(('test_first',),
-                           {'argv': ['test/test_distcovery.py'],
+                           {'argv': sys.argv[:1],
                             'exit': False,
                             'verbosity': 1})])
 
