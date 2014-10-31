@@ -76,9 +76,12 @@ class Test(Command):
         self.set_undefined_options('install',
                                    ('install_purelib', 'coverage_base'))
 
-    def run(self):
+    def print_test_modules(self):
         log.info('Test suites:')
         self.collect_modules()
         for module in self.test_modules:
             log.info('\t%s', module)
+
+    def run(self):
+        self.print_test_modules()
 

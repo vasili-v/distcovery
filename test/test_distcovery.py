@@ -182,6 +182,21 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
         self.assertTrue(hasattr(test, 'test_modules'))
         self.assertEqual(test.test_modules, dict(self.expected_modules))
 
+    def test_print_test_modules(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.print_test_modules()
+
+        self.assertEqual(self.stdout.getvalue(),
+                         'Test suites:\n' \
+                         '\tsub_third.sub_first\n' \
+                         '\tsecond\n' \
+                         '\tsub_first.sub_first\n' \
+                         '\tsub_third.sub_second.sub_first\n' \
+                         '\tfirst\n')
+
     def test_run(self):
         self.full_test_tree()
 
