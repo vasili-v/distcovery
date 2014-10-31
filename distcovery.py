@@ -15,6 +15,35 @@ _TEST_ALIAS = 2
 _TEST_PACKAGE_COMPILED_REGEX = re.compile('%s$' % _TEST_PACKAGE_REGEX)
 _TEST_MODULE_COMPILED_REGEX = re.compile('%s$' % _TEST_MODULE_REGEX)
 
+class DistcoveryException(Exception):
+    def __init__(self, **kwargs):
+        super(DistcoveryException, self).__init__(self.template % kwargs)
+
+    @staticmethod
+    def stringify_list(items):
+        last = '"%s"' % items[-1]
+
+        if len(items) > 1:
+            return '"%s" and %s' % ('", "'.join(items[:-1]), last), 's'
+
+        return last, ''
+
+class NoTestModulesException(DistcoveryException):
+    template = 'Couldn\'t find any test module. Make sure that path ' \
+               '"%(path)s" contains any valid python module named ' \
+               '"test_*.py" or package "test_*".'
+
+    def __init__(self, path):
+        super(NoTestModulesException, self).__init__(path=path)
+
+class UnknownModulesException(DistcoveryException):
+    template = 'Unknown module%(suffix)s: %(modules)s.'
+
+    def __init__(self, modules):
+        modules, suffix = self.stringify_list(modules)
+        super(UnknownModulesException, self).__init__(modules=modules,
+                                                      suffix=suffix)
+
 def _make_name(sequence):
     return '.'.join(sequence)
 
@@ -78,10 +107,22 @@ class Test(Command):
 
     def print_test_modules(self):
         log.info('Test suites:')
-        self.collect_modules()
         for module in self.test_modules:
             log.info('\t%s', module)
 
-    def run(self):
-        self.print_test_modules()
+    def validate_modules(self, modules):
+        if not self.test_modules:
+            raise NoTestModulesException(self.test_root)
 
+        modules = set(modules) - set(self.test_modules)
+        if modules:
+            raise UnknownModulesException(list(modules))
+
+    def run(self):
+        self.collect_modules()
+        if not self.module:
+            self.print_test_modules()
+            return
+
+        modules = [item.strip() for item in self.module.split(',')]
+        self.validate_modules(modules)

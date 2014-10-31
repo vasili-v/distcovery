@@ -13,7 +13,7 @@ from mocks import mock_directory_tree
 
 from distcovery import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
                        _is_package, _is_module, _listdir, _walk_path, _walk, \
-                       Test
+                       Test, NoTestModulesException, UnknownModulesException
 
 class PreserveOs(object):
     def setUp(self):
@@ -187,7 +187,72 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
+        test.collect_modules()
         test.print_test_modules()
+
+        self.assertEqual(self.stdout.getvalue(),
+                         'Test suites:\n' \
+                         '\tsub_third.sub_first\n' \
+                         '\tsecond\n' \
+                         '\tsub_first.sub_first\n' \
+                         '\tsub_third.sub_second.sub_first\n' \
+                         '\tfirst\n')
+
+    def test_validate_modules_no_test_modules(self):
+        test = Test(Distribution())
+        test.test_modules = []
+
+        with self.assertRaises(NoTestModulesException) as ctx:
+            test.validate_modules([])
+
+        self.assertEqual(ctx.exception.message,
+                         NoTestModulesException.template % \
+                         {'path': test.test_root})
+
+    def test_validate_modules_single_unknown_module(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.collect_modules()
+        module = ['unknown']
+        with self.assertRaises(UnknownModulesException) as ctx:
+            test.validate_modules(module)
+
+        modules, suffix = UnknownModulesException.stringify_list(module)
+        self.assertEqual(ctx.exception.message,
+                         UnknownModulesException.template % \
+                         {'modules': modules, 'suffix': suffix})
+
+    def test_validate_modules_unknown_modules(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.collect_modules()
+        modules = ['first_unknown', 'third_unknown', 'fourth_unknown']
+        with self.assertRaises(UnknownModulesException) as ctx:
+            test.validate_modules(modules + ['second', 'first'])
+
+        modules, suffix = UnknownModulesException.stringify_list(modules)
+        self.assertEqual(ctx.exception.message,
+                         UnknownModulesException.template % \
+                         {'modules': modules, 'suffix': suffix})
+
+    def test_validate_modules(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.collect_modules()
+        test.validate_modules(['second', 'first'])
+
+    def test_run_print_test_modules(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.run()
 
         self.assertEqual(self.stdout.getvalue(),
                          'Test suites:\n' \
@@ -202,15 +267,10 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
+        test.module = 'first'
         test.run()
 
-        self.assertEqual(self.stdout.getvalue(),
-                         'Test suites:\n' \
-                         '\tsub_third.sub_first\n' \
-                         '\tsecond\n' \
-                         '\tsub_first.sub_first\n' \
-                         '\tsub_third.sub_second.sub_first\n' \
-                         '\tfirst\n')
+        self.assertEqual(self.stdout.getvalue(), '')
 
 if __name__ == '__main__':
     unittest.main()
