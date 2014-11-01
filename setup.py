@@ -1,5 +1,5 @@
 from distutils.core import setup
-from distcovery import Test
+from distcovery.test import Test
 
 setup(name='Distcovery',
       version='0.0.1',
@@ -11,7 +11,7 @@ setup(name='Distcovery',
       author='Vasili Vasilyeu',
       author_email='vasili.v@tut.by',
       url='https://github.com/vasili-v/distcovery',
-      py_modules=['distcovery'],
+      packages=['distcovery'],
       license='MIT',
       platforms=('Linux', 'Darwin'),
       cmdclass={'test': Test})

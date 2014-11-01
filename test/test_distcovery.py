@@ -11,10 +11,10 @@ from distutils.dist import Distribution
 
 from mocks import mock_directory_tree
 
-from distcovery import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
-                       _is_package, _is_module, _listdir, _walk_path, \
-                       _split_path, _walk, Test, InvalidTestRoot, \
-                       NoTestModulesException, UnknownModulesException
+from distcovery.test import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
+                            _is_package, _is_module, _listdir, _walk_path, \
+                            _split_path, _walk, Test, InvalidTestRoot, \
+                            NoTestModulesException, UnknownModulesException
 
 class PreserveOs(object):
     def setUp(self):
