@@ -11,10 +11,11 @@ from distutils.dist import Distribution
 
 from mocks import mock_directory_tree
 
+from distcovery.exceptions import InvalidTestRoot, NoTestModulesException, \
+                                  UnknownModulesException
 from distcovery.test import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
                             _is_package, _is_module, _listdir, _walk_path, \
-                            _split_path, _walk, Test, InvalidTestRoot, \
-                            NoTestModulesException, UnknownModulesException
+                            _split_path, _walk, Test
 
 class PreserveOs(object):
     def setUp(self):
@@ -228,21 +229,6 @@ class TestDistcoveryTest(PreserveOs, unittest.TestCase):
         self.assertEqual(ctx.exception.message,
                          NoTestModulesException.template % \
                          {'path': test.test_root})
-
-    def test_validate_modules_single_unknown_module(self):
-        self.full_test_tree()
-
-        test = Test(Distribution())
-        test.test_root = '.'
-        test.collect_modules()
-        module = ['unknown']
-        with self.assertRaises(UnknownModulesException) as ctx:
-            test.validate_modules(module)
-
-        modules, suffix = UnknownModulesException.stringify_list(module)
-        self.assertEqual(ctx.exception.message,
-                         UnknownModulesException.template % \
-                         {'modules': modules, 'suffix': suffix})
 
     def test_validate_modules_unknown_modules(self):
         self.full_test_tree()
