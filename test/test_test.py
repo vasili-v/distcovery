@@ -9,6 +9,10 @@ from distutils.dist import Distribution
 
 from utils import mock_directory_tree, PreserveOs
 
+# Reload module to run its global section under coverage supervision
+import distcovery.test
+reload(distcovery.test)
+
 from distcovery.exceptions import NoTestModulesException, \
                                   UnknownModulesException
 from distcovery.test import Test

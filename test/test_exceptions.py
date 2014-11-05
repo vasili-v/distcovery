@@ -1,5 +1,9 @@
 import unittest
 
+# Reload module to run its global section under coverage supervision
+import distcovery.exceptions
+reload(distcovery.exceptions)
+
 from distcovery.exceptions import DistcoveryException, InvalidTestRoot, \
                                   NoTestModulesException, \
                                   UnknownModulesException

@@ -7,13 +7,14 @@ from distutils.cmd import Command
 from distcovery.exceptions import NoTestModulesException, \
                                   UnknownModulesException
 from distcovery.path import walk
+from distcovery.coverage_wrapper import Coverage
 
 class Test(Command):
     description = 'run tests for the package'
 
     user_options = [('module=', 'm', 'set of test modules to run (several ' \
                                      'modules can be listed using comma)'),
-                    ('coverage-base', None, 'base installation directory'),
+                    ('coverage-base=', None, 'base installation directory'),
                     ('coverage', 'c', 'calculate test coverage')]
 
     boolean_options = ['coverage']
@@ -53,6 +54,12 @@ class Test(Command):
         modules = [item.strip() for item in self.module.split(',')]
         self.validate_modules(modules)
 
+        coverage = Coverage(self.coverage, self.coverage_base, self.distribution)
+
         for module in modules:
-            unittest.main(self.test_modules[module], argv=sys.argv[:1],
-                          exit=False, verbosity=self.verbose)
+            with coverage:
+                unittest.main(self.test_modules[module], argv=sys.argv[:1],
+                              exit=False, verbosity=self.verbose)
+
+        coverage.report()
+

@@ -5,6 +5,10 @@ import collections
 
 from utils import mock_directory_tree, PreserveOs
 
+# Reload module to run its global section under coverage supervision
+import distcovery.path
+reload(distcovery.path)
+
 from distcovery.exceptions import InvalidTestRoot
 from distcovery.path import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
                             _is_package, _is_module, _listdir, _walk_path, \
