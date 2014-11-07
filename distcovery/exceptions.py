@@ -3,6 +3,19 @@ class DistcoveryException(Exception):
         super(DistcoveryException, self). \
             __init__(self.template % kwargs)
 
+class NoMoreAttempts(DistcoveryException):
+    template = 'Coudn\'t create unique name with %(length)d ' \
+               'digit%(length_suffix)s in %(limit)d attemt%(limit_suffix)s.'
+
+    def __init__(self, limit, length):
+        super(NoMoreAttempts, self). \
+            __init__(length=length, length_suffix=self.number_suffix(length),
+                     limit=limit, limit_suffix=self.number_suffix(limit))
+
+    @staticmethod
+    def number_suffix(number):
+        return 's' if number > 1 else ''
+
 class InvalidTestRoot(DistcoveryException):
     template = 'Can\'t run tests outside current directory. ' \
                'Tests directory: "%(tests)s". Current directory: "%(current)s".'
