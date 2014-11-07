@@ -4,6 +4,8 @@ import StringIO
 import __builtin__
 import os
 
+from distutils import log
+
 # Reload module to run its global section under coverage supervision
 import distcovery.coverage_wrapper
 reload(distcovery.coverage_wrapper)
@@ -60,6 +62,8 @@ class TestCoverage(unittest.TestCase):
     def setUp(self):
         super(TestCoverage, self).setUp()
 
+        self.__threshold = log.set_threshold(log.INFO)
+
         self.__stdout = sys.stdout
         self.stdout = StringIO.StringIO()
         sys.stdout = self.stdout
@@ -74,6 +78,8 @@ class TestCoverage(unittest.TestCase):
         __builtin__.__import__ = self.__import
         sys.stderr = self.__stderr
         sys.stdout = self.__stdout
+
+        log.set_threshold(self.__threshold)
 
         super(TestCoverage, self).tearDown()
 

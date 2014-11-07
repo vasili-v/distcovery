@@ -15,13 +15,14 @@ reload(distcovery.test)
 
 from distcovery.exceptions import NoTestModulesException, \
                                   UnknownModulesException
+from distcovery.path import Package
 from distcovery.test import Test
 
 class TestTest(PreserveOs, unittest.TestCase):
     def setUp(self):
         super(TestTest, self).setUp()
 
-        log.set_verbosity(1)
+        self.__threshold = log.set_threshold(log.INFO)
 
         self.__stdout = sys.stdout
         self.stdout = StringIO.StringIO()
@@ -33,6 +34,8 @@ class TestTest(PreserveOs, unittest.TestCase):
         unittest.main = self.__unittest_main
 
         sys.stdout = self.__stdout
+
+        log.set_threshold(self.__threshold)
 
         super(TestTest, self).tearDown()
 
@@ -57,44 +60,58 @@ class TestTest(PreserveOs, unittest.TestCase):
         test.finalize_options()
         self.assertEqual(test.coverage_base, 'test')
 
-    def test_collect_modules_empty(self):
+    def test_collect_tests_empty(self):
         tree = {('.',): tuple()}
         os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree(tree)
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.collect_modules()
-        self.assertTrue(hasattr(test, 'test_modules'))
-        self.assertEqual(test.test_modules, {})
+        test.collect_tests()
+        self.assertTrue(hasattr(test, 'test_package'))
+        self.assertTrue(isinstance(test.test_package, Package))
+        self.assertEqual(test.test_package.modules, [])
+        self.assertEqual(test.test_package.packages, [])
+        self.assertEqual(test.test_package.content, {})
 
-    def test_collect_modules(self):
+    def test_collect_tests(self):
         self.full_test_tree()
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.collect_modules()
-        self.assertTrue(hasattr(test, 'test_modules'))
-        self.assertEqual(test.test_modules, dict(self.expected_modules))
+        test.collect_tests()
+        self.assertTrue(hasattr(test, 'test_package'))
+        self.assertTrue(isinstance(test.test_package, Package))
 
-    def test_print_test_modules(self):
+        content = {}
+        for alias, importable in test.test_package.content.iteritems():
+            content[alias] = importable.str_name()
+        self.assertEqual(content, self.expected_content)
+
+    def test_print_test_package(self):
         self.full_test_tree()
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.collect_modules()
-        test.print_test_modules()
+        test.collect_tests()
+        test.print_test_package()
 
         self.assertEqual(self.stdout.getvalue(),
                          'Test suites:\n' \
-                         '\tsub_third.sub_first\n' \
+                         '\tfirst\n' \
                          '\tsecond\n' \
-                         '\tsub_first.sub_first\n' \
-                         '\tsub_third.sub_second.sub_first\n' \
-                         '\tfirst\n')
+                         '\tsub_first:\n' \
+                         '\t\tsub_first.sub_first\n' \
+                         '\tsub_third:\n' \
+                         '\t\tsub_third.sub_first\n' \
+                         '\t\tsub_third.sub_second:\n' \
+                         '\t\t\tsub_third.sub_second.sub_first\n')
 
     def test_validate_modules_no_test_modules(self):
+        class Package(object):
+            content = {}
+
         test = Test(Distribution())
-        test.test_modules = []
+        test.test_package = Package
 
         with self.assertRaises(NoTestModulesException) as ctx:
             test.validate_modules([])
@@ -108,7 +125,7 @@ class TestTest(PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.collect_modules()
+        test.collect_tests()
         modules = ['first_unknown', 'third_unknown', 'fourth_unknown']
         with self.assertRaises(UnknownModulesException) as ctx:
             test.validate_modules(modules + ['second', 'first'])
@@ -123,10 +140,10 @@ class TestTest(PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.collect_modules()
+        test.collect_tests()
         test.validate_modules(['second', 'first'])
 
-    def test_run_print_test_modules(self):
+    def test_run_print_test_package(self):
         self.full_test_tree()
 
         test = Test(Distribution())
@@ -135,11 +152,14 @@ class TestTest(PreserveOs, unittest.TestCase):
 
         self.assertEqual(self.stdout.getvalue(),
                          'Test suites:\n' \
-                         '\tsub_third.sub_first\n' \
+                         '\tfirst\n' \
                          '\tsecond\n' \
-                         '\tsub_first.sub_first\n' \
-                         '\tsub_third.sub_second.sub_first\n' \
-                         '\tfirst\n')
+                         '\tsub_first:\n' \
+                         '\t\tsub_first.sub_first\n' \
+                         '\tsub_third:\n' \
+                         '\t\tsub_third.sub_first\n' \
+                         '\t\tsub_third.sub_second:\n' \
+                         '\t\t\tsub_third.sub_second.sub_first\n')
 
     def test_run(self):
         self.full_test_tree()

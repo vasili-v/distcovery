@@ -10,8 +10,8 @@ import distcovery.path
 reload(distcovery.path)
 
 from distcovery.exceptions import InvalidTestRoot
-from distcovery.path import _TEST_PACKAGE_REGEX, _make_name, _sub_item, \
-                            _is_package, _is_module, _listdir, _walk_path, \
+from distcovery.path import _TEST_PACKAGE_PATTERN, _TEST_MODULE_PATTERN, \
+                            _is_package, _is_module, Importable, Package, \
                             _split_path, walk
 
 class TestPath(PreserveOs, unittest.TestCase):
@@ -24,14 +24,6 @@ class TestPath(PreserveOs, unittest.TestCase):
                 ('test_forth',): ('module.py',),
                 ('test_forth', 'module.py'): None}
         os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree(tree)
-
-    def test__make_name(self):
-        self.assertEqual(_make_name(('xxx', 'yyy', 'zzz')), 'xxx.yyy.zzz')
-
-    def test__sub_item(self):
-        match = re.match(_TEST_PACKAGE_REGEX, 'test_sub_item')
-        self.assertEqual(_sub_item(match, ('item',), ('test_item',)),
-                         (('item', 'sub_item'), ('test_item', 'test_sub_item')))
 
     def test__is_package(self):
         self.small_test_tree()
@@ -51,27 +43,10 @@ class TestPath(PreserveOs, unittest.TestCase):
         self.assertFalse(_is_module('test_forth'))
         self.assertFalse(_is_module('test_fifth'))
 
-    def test__listdir(self):
-        self.small_test_tree()
-
-        generator = _listdir('test_third')
-        self.assertTrue(isinstance(generator, collections.Iterable))
-        self.assertEqual(list(generator),
-                         [(os.path.join('test_third', '__init__.py'),
-                           '__init__.py'),
-                          (os.path.join('test_third', 'test_item.py'),
-                           'test_item.py')])
-
-    def test__walk_path(self):
-        self.full_test_tree()
-
-        self.assertEqual(tuple(_walk_path('.', tuple(), tuple())),
-                         self.expected_modules)
-
     def test__split_path(self):
         self.assertEqual(_split_path(os.path.join('1', '2', '3', '4', '5'),
                                      os.path.join('1', '2')),
-                         ['3', '4', '5'])
+                         ('3', '4', '5'))
 
     def test__split_path_invalid_root(self):
         tests = os.path.join('1', '2', '3', '4', '5')
@@ -86,7 +61,102 @@ class TestPath(PreserveOs, unittest.TestCase):
     def test_walk(self):
         self.full_test_tree()
 
-        self.assertEqual(walk('.'), dict(self.expected_modules))
+        content = {}
+        for alias, importable in walk('.').content.iteritems():
+            content[alias] = importable.str_name()
+
+        self.assertEqual(content, self.expected_content)
+
+class TestImportable(unittest.TestCase):
+    def test_join_sequence(self):
+        self.assertEqual(Importable.join_sequence(('1', '2', '3')), '1.2.3')
+
+    def test_creation_default(self):
+        importable = Importable(('test', 'base'), 'test')
+        self.assertTrue(isinstance(importable, Importable))
+
+        self.assertEqual(importable.base, ('test', 'base'))
+        self.assertEqual(importable.path, 'test')
+        self.assertEqual(importable.alias, tuple())
+        self.assertEqual(importable.name, tuple())
+
+    def test_creation(self):
+        parent = Importable(('test', 'base'), 'test')
+        match = _TEST_MODULE_PATTERN.match('test_module.py')
+
+        importable = Importable(('test', 'base'), 'test', match, parent)
+        self.assertTrue(isinstance(importable, Importable))
+
+        self.assertEqual(importable.base, ('test', 'base'))
+        self.assertEqual(importable.path, 'test')
+        self.assertEqual(importable.alias, ('module',))
+        self.assertEqual(importable.name, ('test_module',))
+
+    def test_str_alias(self):
+        parent = Importable(('test', 'base'), 'test')
+        match = _TEST_PACKAGE_PATTERN.match('test_package')
+
+        parent = Importable(('test', 'base'), 'test', match, parent)
+        match = _TEST_MODULE_PATTERN.match('test_module.py')
+
+        importable = Importable(('test', 'base'), 'test', match, parent)
+        self.assertEqual(importable.str_alias(), 'package.module')
+
+    def test_str_name(self):
+        parent = Importable(('test', 'base'), 'test')
+        match = _TEST_PACKAGE_PATTERN.match('test_package')
+
+        parent = Importable(('test', 'base'), 'test', match, parent)
+        match = _TEST_MODULE_PATTERN.match('test_module.py')
+
+        importable = Importable(('test', 'base'), 'test', match, parent)
+        self.assertEqual(importable.str_name(),
+                         'test.base.test_package.test_module')
+
+class TestPackage(PreserveOs, unittest.TestCase):
+    def test_creation(self):
+        package = Package(('test', 'base'), 'test')
+        self.assertTrue(isinstance(package, Package))
+
+        self.assertEqual(package.modules, [])
+        self.assertEqual(package.packages, [])
+        self.assertEqual(package.content, {})
+
+    def test_listdir(self):
+        self.full_test_tree()
+
+        package = Package(('test', 'base'), '.')
+        self.assertEqual(tuple(package.listdir()),
+                         (('./__init__.py', '__init__.py'),
+                          ('./test_first.py', 'test_first.py'),
+                          ('./test_second.py', 'test_second.py'),
+                          ('./test_sub_first', 'test_sub_first'),
+                          ('./t_sub_first', 't_sub_first'),
+                          ('./test_sub_third', 'test_sub_third')))
+
+    def test_walk(self):
+        self.full_test_tree()
+
+        package = Package(tuple(), '.')
+        content = {}
+        for alias, importable in package.walk():
+            content[alias] = importable.str_name()
+
+        self.assertEqual(content, self.expected_content)
+
+    def test_enumerate(self):
+        self.full_test_tree()
+
+        package = walk('.')
+        self.assertEqual(tuple(package.enumerate(1)),
+                         ((False, 1, 'first'),
+                          (False, 1, 'second'),
+                          (True, 1, 'sub_first'),
+                          (False, 2, 'sub_first.sub_first'),
+                          (True, 1, 'sub_third'),
+                          (False, 2, 'sub_third.sub_first'),
+                          (True, 2, 'sub_third.sub_second'),
+                          (False, 3, 'sub_third.sub_second.sub_first')))
 
 if __name__ == '__main__':
     unittest.main()

@@ -19,8 +19,8 @@ class Test(Command):
 
     boolean_options = ['coverage']
 
-    def collect_modules(self):
-        self.test_modules = walk(self.test_root)
+    def collect_tests(self):
+        self.test_package = walk(self.test_root)
 
     def initialize_options(self):
         self.module = None
@@ -32,23 +32,23 @@ class Test(Command):
         self.set_undefined_options('install',
                                    ('install_purelib', 'coverage_base'))
 
-    def print_test_modules(self):
+    def print_test_package(self):
         log.info('Test suites:')
-        for module in self.test_modules:
-            log.info('\t%s', module)
+        for is_package, level, alias in self.test_package.enumerate(1):
+            log.info('%s%s%s', level*'\t', alias, ':' if is_package else '')
 
     def validate_modules(self, modules):
-        if not self.test_modules:
+        if not self.test_package.content:
             raise NoTestModulesException(self.test_root)
 
-        modules = set(modules) - set(self.test_modules)
+        modules = set(modules) - set(self.test_package.content.keys())
         if modules:
             raise UnknownModulesException(list(modules))
 
     def run(self):
-        self.collect_modules()
+        self.collect_tests()
         if not self.module:
-            self.print_test_modules()
+            self.print_test_package()
             return
 
         modules = [item.strip() for item in self.module.split(',')]
@@ -58,8 +58,9 @@ class Test(Command):
 
         for module in modules:
             with coverage:
-                unittest.main(self.test_modules[module], argv=sys.argv[:1],
-                              exit=False, verbosity=self.verbose)
+                unittest.main(self.test_package.content[module].str_name(),
+                              argv=sys.argv[:1], exit=False,
+                              verbosity=self.verbose)
 
         coverage.report()
 

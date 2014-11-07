@@ -77,13 +77,17 @@ class PreserveOs(object):
 
         os.listdir, os.path.isfile, os.path.isdir = mock_directory_tree(tree)
 
-        self.expected_modules = (('first', 'test_first'),
-                                 ('second', 'test_second'),
-                                 ('sub_first.sub_first',
-                                  'test_sub_first.test_sub_first'),
-                                 ('sub_third.sub_first',
-                                  'test_sub_third.test_sub_first'),
-                                 ('sub_third.sub_second.sub_first',
-                                  'test_sub_third.test_sub_second.' \
-                                      'test_sub_first'))
+        self.expected_content = {'first': 'test_first',
+                                 'second': 'test_second',
+                                 'sub_first': 'test_sub_first',
+                                 'sub_first.sub_first': \
+                                     'test_sub_first.test_sub_first',
+                                 'sub_third': 'test_sub_third',
+                                 'sub_third.sub_first': \
+                                     'test_sub_third.test_sub_first',
+                                 'sub_third.sub_second': \
+                                     'test_sub_third.test_sub_second',
+                                 'sub_third.sub_second.sub_first': \
+                                     'test_sub_third.test_sub_second.' \
+                                     'test_sub_first'}
 
