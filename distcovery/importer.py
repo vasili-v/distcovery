@@ -1,6 +1,7 @@
 import random
 
 from distcovery.exceptions import NoMoreAttempts
+from distcovery.path import Package
 
 class RandomUniqueNames(object):
     def __init__(self, limit=10, length=15):
@@ -25,4 +26,25 @@ class RandomUniqueNames(object):
 
         self.__names.add(name)
         return name
+
+class Importer(object):
+    def __init__(self, package):
+        self.random_unique_names = RandomUniqueNames()
+
+        self.aliases = {}
+        self.sources = {}
+
+        self.build_module('*', package)
+
+    def build_module(self, alias, package):
+        name = self.random_unique_names.new()
+
+        self.aliases[alias] = name
+        self.sources[name] = ''
+
+        for alias, importable in package.content.iteritems():
+            if isinstance(importable, Package):
+                self.build_module(alias, importable)
+            else:
+                self.sources[name] += 'import %s\n' % importable.str_name()
 

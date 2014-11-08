@@ -1,8 +1,11 @@
 import unittest
 import re
 
+from utils import PreserveOs
+
 from distcovery.exceptions import NoMoreAttempts
-from distcovery.importer import RandomUniqueNames
+from distcovery.path import Package, walk
+from distcovery.importer import RandomUniqueNames, Importer
 
 class TestRandomUniqueNames(unittest.TestCase):
     def test_creation(self):
@@ -42,6 +45,56 @@ class TestRandomUniqueNames(unittest.TestCase):
                           'limit_suffix': NoMoreAttempts.number_suffix(10),
                           'length': 2,
                           'length_suffix': NoMoreAttempts.number_suffix(2)})
+
+class TestImporter(PreserveOs, unittest.TestCase):
+    def test_creation(self):
+        package = Package(('test', 'base'), 'test')
+        importer = Importer(package)
+
+        self.assertIsInstance(importer, Importer)
+        self.assertEqual(importer.aliases.keys(), ['*'])
+
+        name = importer.aliases['*']
+        self.assertRegexpMatches(name, '^X_\\d+$')
+        self.assertEquals(importer.sources, {name: ''})
+
+    def test_build_module(self):
+        self.full_test_tree()
+
+        package = walk('.')
+
+        importer = Importer(package)
+        self.assertEqual(set(importer.aliases.keys()),
+                         set(('*', 'sub_first', 'sub_third',
+                              'sub_third.sub_second')))
+
+        name = importer.aliases['*']
+        self.assertEqual(set(importer.sources[name].split('\n')),
+                         set(['import test_first',
+                              'import test_second',
+                              'import test_sub_first.test_sub_first',
+                              'import test_sub_third.test_sub_first',
+                              'import test_sub_third.test_sub_second.' \
+                                     'test_sub_first',
+                              '']))
+
+        name = importer.aliases['sub_first']
+        self.assertEqual(set(importer.sources[name].split('\n')),
+                         set(['import test_sub_first.test_sub_first',
+                              '']))
+
+        name = importer.aliases['sub_third']
+        self.assertEqual(set(importer.sources[name].split('\n')),
+                         set(['import test_sub_third.test_sub_first',
+                              'import test_sub_third.test_sub_second.' \
+                                     'test_sub_first',
+                              '']))
+
+        name = importer.aliases['sub_third.sub_second']
+        self.assertEqual(set(importer.sources[name].split('\n')),
+                         set(['import test_sub_third.test_sub_second.' \
+                                     'test_sub_first',
+                              '']))
 
 if __name__ == '__main__':
     unittest.main()
