@@ -48,3 +48,7 @@ class Importer(object):
             else:
                 self.sources[name] += 'import %s\n' % importable.str_name()
 
+    def find_module(self, fullname, path=None):
+        if fullname in self.sources:
+            return self
+

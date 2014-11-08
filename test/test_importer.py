@@ -48,8 +48,7 @@ class TestRandomUniqueNames(unittest.TestCase):
 
 class TestImporter(PreserveOs, unittest.TestCase):
     def test_creation(self):
-        package = Package(('test', 'base'), 'test')
-        importer = Importer(package)
+        importer = Importer(Package(('test', 'base'), 'test'))
 
         self.assertIsInstance(importer, Importer)
         self.assertEqual(importer.aliases.keys(), ['*'])
@@ -61,9 +60,7 @@ class TestImporter(PreserveOs, unittest.TestCase):
     def test_build_module(self):
         self.full_test_tree()
 
-        package = walk('.')
-
-        importer = Importer(package)
+        importer = Importer(walk('.'))
         self.assertEqual(set(importer.aliases.keys()),
                          set(('*', 'sub_first', 'sub_third',
                               'sub_third.sub_second')))
@@ -95,6 +92,18 @@ class TestImporter(PreserveOs, unittest.TestCase):
                          set(['import test_sub_third.test_sub_second.' \
                                      'test_sub_first',
                               '']))
+
+    def test_find_module(self):
+        self.full_test_tree()
+        importer = Importer(walk('.'))
+
+        name = importer.aliases['*']
+        self.assertEqual(importer.find_module(name), importer)
+
+    def test_find_module_non_test_module(self):
+        self.full_test_tree()
+
+        self.assertEqual(Importer(walk('.')).find_module('unittest'), None)
 
 if __name__ == '__main__':
     unittest.main()
