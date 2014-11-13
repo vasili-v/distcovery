@@ -1,4 +1,6 @@
 import random
+import sys
+import imp
 
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package
@@ -51,4 +53,25 @@ class Importer(object):
     def find_module(self, fullname, path=None):
         if fullname in self.sources:
             return self
+
+    def load_module(self, fullname):
+        if fullname in sys.modules:
+            return sys.modules[fullname]
+
+        module = imp.new_module(fullname)
+        module.__file__ = '<test package>'
+        module.__path__ = []
+        module.__loader__ = self
+        module.__package__ = fullname
+
+        code = self.sources[fullname]
+
+        sys.modules[fullname] = module
+        try:
+            exec(code, module.__dict__)
+        except:
+            del sys.modules[fullname]
+            raise
+
+        return module
 

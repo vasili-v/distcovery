@@ -1,5 +1,6 @@
 import unittest
 import re
+import sys
 
 from utils import PreserveOs
 
@@ -47,6 +48,10 @@ class TestRandomUniqueNames(unittest.TestCase):
                           'length_suffix': NoMoreAttempts.number_suffix(2)})
 
 class TestImporter(PreserveOs, unittest.TestCase):
+    def tearDown(self):
+        if 'test01' in sys.modules:
+            del sys.modules['test01']
+
     def test_creation(self):
         importer = Importer(Package(('test', 'base'), 'test'))
 
@@ -104,6 +109,36 @@ class TestImporter(PreserveOs, unittest.TestCase):
         self.full_test_tree()
 
         self.assertEqual(Importer(walk('.')).find_module('unittest'), None)
+
+    def test_load_module(self):
+        importer = Importer(Package(('test', 'base'), 'test'))
+        importer.sources['test01'] = 'test = 1\n'
+
+        test01 = importer.load_module('test01')
+        self.assertIsInstance(test01, type(sys))
+        self.assertIn('test01', sys.modules)
+        self.assertIs(test01, sys.modules['test01'])
+        self.assertEqual(test01.__file__, '<test package>')
+        self.assertEqual(test01.__path__, [])
+        self.assertIs(test01.__loader__, importer)
+        self.assertEqual(test01.__package__, 'test01')
+        self.assertEqual(test01.test, 1)
+
+    def test_load_module_failed(self):
+        importer = Importer(Package(('test', 'base'), 'test'))
+        importer.sources['test01'] = 'raise UserWarning(\'Test!\')\n'
+
+        with self.assertRaises(UserWarning) as ctx:
+            importer.load_module('test01')
+
+        self.assertEqual(ctx.exception.message, 'Test!')
+        self.assertNotIn('test01', sys.modules)
+
+    def test_load_module_already_loaded(self):
+        sys.modules['test01'] = 'test01'
+
+        importer = Importer(Package(('test', 'base'), 'test'))
+        self.assertEqual(importer.load_module('test01'), 'test01')
 
 if __name__ == '__main__':
     unittest.main()
