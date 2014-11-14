@@ -5,6 +5,9 @@ import imp
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package
 
+_MODULE_NAME_PREFIX = 'TestModule'
+_IMPORT_MODULE_LINE = 'import %%s as %s%%d\n' % _MODULE_NAME_PREFIX
+
 class RandomUniqueNames(object):
     def __init__(self, limit=10, length=15):
         self.__limit = int(limit) if limit > 1 else 1
@@ -44,11 +47,14 @@ class Importer(object):
         self.aliases[alias] = name
         self.sources[name] = ''
 
+        counter = 0
         for alias, importable in package.content.iteritems():
             if isinstance(importable, Package):
                 self.build_module(alias, importable)
             else:
-                self.sources[name] += 'import %s\n' % importable.str_name()
+                counter += 1
+                self.sources[name] += _IMPORT_MODULE_LINE % \
+                                      (importable.str_name(), counter)
 
     def find_module(self, fullname, path=None):
         if fullname in self.sources:

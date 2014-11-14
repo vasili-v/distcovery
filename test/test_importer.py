@@ -4,9 +4,13 @@ import sys
 
 from utils import PreserveOs
 
+# Reload module to run its global section under coverage supervision
+import distcovery.importer
+reload(distcovery.importer)
+
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package, walk
-from distcovery.importer import RandomUniqueNames, Importer
+from distcovery.importer import _MODULE_NAME_PREFIX, RandomUniqueNames, Importer
 
 class TestRandomUniqueNames(unittest.TestCase):
     def test_creation(self):
@@ -52,6 +56,21 @@ class TestImporter(PreserveOs, unittest.TestCase):
         if 'test01' in sys.modules:
             del sys.modules['test01']
 
+    def __assert_source(self, source, *expected_modules):
+        regex = 'import\\s(.*)\\sas\\s%s\\d+$' % re.escape(_MODULE_NAME_PREFIX)
+        pattern = re.compile(regex)
+
+        imported_modules = set()
+        lines = source.split('\n')
+        for line in lines[:-1]:
+            match = pattern.match(line)
+            self.assertNotEqual(match, None, 'Line %s doesn\'t matches ' \
+                                             'regex "%s"' % (repr(line), regex))
+            imported_modules.add(match.group(1))
+
+        self.assertEqual(lines[-1], '')
+        self.assertEqual(imported_modules, set(expected_modules))
+
     def test_creation(self):
         importer = Importer(Package(('test', 'base'), 'test'))
 
@@ -71,32 +90,25 @@ class TestImporter(PreserveOs, unittest.TestCase):
                               'sub_third.sub_second')))
 
         name = importer.aliases['*']
-        self.assertEqual(set(importer.sources[name].split('\n')),
-                         set(['import test_first',
-                              'import test_second',
-                              'import test_sub_first.test_sub_first',
-                              'import test_sub_third.test_sub_first',
-                              'import test_sub_third.test_sub_second.' \
-                                     'test_sub_first',
-                              '']))
+        self.__assert_source(importer.sources[name],
+                             'test_first',
+                             'test_second',
+                             'test_sub_first.test_sub_first',
+                             'test_sub_third.test_sub_first',
+                             'test_sub_third.test_sub_second.test_sub_first')
 
         name = importer.aliases['sub_first']
-        self.assertEqual(set(importer.sources[name].split('\n')),
-                         set(['import test_sub_first.test_sub_first',
-                              '']))
+        self.__assert_source(importer.sources[name],
+                             'test_sub_first.test_sub_first')
 
         name = importer.aliases['sub_third']
-        self.assertEqual(set(importer.sources[name].split('\n')),
-                         set(['import test_sub_third.test_sub_first',
-                              'import test_sub_third.test_sub_second.' \
-                                     'test_sub_first',
-                              '']))
+        self.__assert_source(importer.sources[name],
+                             'test_sub_third.test_sub_first',
+                             'test_sub_third.test_sub_second.test_sub_first')
 
         name = importer.aliases['sub_third.sub_second']
-        self.assertEqual(set(importer.sources[name].split('\n')),
-                         set(['import test_sub_third.test_sub_second.' \
-                                     'test_sub_first',
-                              '']))
+        self.__assert_source(importer.sources[name],
+                             'test_sub_third.test_sub_second.test_sub_first')
 
     def test_find_module(self):
         self.full_test_tree()
