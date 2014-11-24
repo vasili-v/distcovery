@@ -21,6 +21,13 @@ class Test(Command):
 
     def collect_tests(self):
         self.test_package = walk(self.test_root)
+        if not self.test_package.content:
+            raise NoTestModulesException(self.test_root)
+
+    def print_test_package(self):
+        log.info('Test suites:')
+        for is_package, level, alias in self.test_package.enumerate(1):
+            log.info('%s%s%s', level*'\t', alias, ':' if is_package else '')
 
     def initialize_options(self):
         self.module = None
@@ -32,29 +39,23 @@ class Test(Command):
         self.set_undefined_options('install',
                                    ('install_purelib', 'coverage_base'))
 
-    def print_test_package(self):
-        log.info('Test suites:')
-        for is_package, level, alias in self.test_package.enumerate(1):
-            log.info('%s%s%s', level*'\t', alias, ':' if is_package else '')
-
     def validate_modules(self, modules):
-        if not self.test_package.content:
-            raise NoTestModulesException(self.test_root)
-
         modules = set(modules) - set(self.test_package.content.keys())
         if modules:
             raise UnknownModulesException(list(modules))
 
     def run(self):
         self.collect_tests()
-        if not self.module:
+
+        if self.module:
+            modules = [item.strip() for item in self.module.split(',')]
+            self.validate_modules(modules)
+        else:
             self.print_test_package()
             return
 
-        modules = [item.strip() for item in self.module.split(',')]
-        self.validate_modules(modules)
-
-        coverage = Coverage(self.coverage, self.coverage_base, self.distribution)
+        coverage = Coverage(self.coverage, self.coverage_base,
+                            self.distribution)
 
         for module in modules:
             with coverage:

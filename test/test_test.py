@@ -66,12 +66,19 @@ class TestTest(PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.collect_tests()
+
+        with self.assertRaises(NoTestModulesException) as ctx:
+            test.collect_tests()
+
         self.assertTrue(hasattr(test, 'test_package'))
         self.assertTrue(isinstance(test.test_package, Package))
         self.assertEqual(test.test_package.modules, [])
         self.assertEqual(test.test_package.packages, [])
         self.assertEqual(test.test_package.content, {})
+
+        self.assertEqual(ctx.exception.message,
+                         NoTestModulesException.template % \
+                         {'path': test.test_root})
 
     def test_collect_tests(self):
         self.full_test_tree()
@@ -105,20 +112,6 @@ class TestTest(PreserveOs, unittest.TestCase):
                          '\t\tsub_third.sub_first\n' \
                          '\t\tsub_third.sub_second:\n' \
                          '\t\t\tsub_third.sub_second.sub_first\n')
-
-    def test_validate_modules_no_test_modules(self):
-        class Package(object):
-            content = {}
-
-        test = Test(Distribution())
-        test.test_package = Package
-
-        with self.assertRaises(NoTestModulesException) as ctx:
-            test.validate_modules([])
-
-        self.assertEqual(ctx.exception.message,
-                         NoTestModulesException.template % \
-                         {'path': test.test_root})
 
     def test_validate_modules_unknown_modules(self):
         self.full_test_tree()
