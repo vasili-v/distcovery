@@ -1,6 +1,7 @@
 import unittest
 import re
 import sys
+import imp
 
 from utils import PreserveOs
 
@@ -10,7 +11,23 @@ reload(distcovery.importer)
 
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package, walk
-from distcovery.importer import _MODULE_NAME_PREFIX, RandomUniqueNames, Importer
+from distcovery.importer import _MODULE_NAME_PREFIX, _enumerate_testmodules, \
+                                RandomUniqueNames, Importer
+
+class TestImporterGlobal(unittest.TestCase):
+    def test__enumerate_testmodules(self):
+        test1 = imp.new_module('test1')
+        test2 = imp.new_module('test2')
+        test3 = imp.new_module('test3')
+
+        global_section = {_MODULE_NAME_PREFIX + '1': test1,
+                          _MODULE_NAME_PREFIX + '2': test2,
+                          _MODULE_NAME_PREFIX + 'X': imp.new_module('testX'),
+                          _MODULE_NAME_PREFIX + '3': test3,
+                          _MODULE_NAME_PREFIX + '4': 'Some Data'}
+
+        self.assertEqual(set(_enumerate_testmodules(global_section)),
+                         set([test1, test2, test3]))
 
 class TestRandomUniqueNames(unittest.TestCase):
     def test_creation(self):

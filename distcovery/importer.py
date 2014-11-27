@@ -1,12 +1,20 @@
 import random
 import sys
 import imp
+import re
 
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package
 
 _MODULE_NAME_PREFIX = 'TestModule'
 _IMPORT_MODULE_LINE = 'import %%s as %s%%d\n' % _MODULE_NAME_PREFIX
+_MODULE_NAME_REGEX = '%s\\d+$' % _MODULE_NAME_PREFIX
+_MODULE_NAME_PATTERN = re.compile(_MODULE_NAME_REGEX)
+
+def _enumerate_testmodules(global_section):
+    for name, item in global_section.iteritems():
+        if isinstance(item, type(sys)) and _MODULE_NAME_PATTERN.match(name):
+            yield item
 
 class RandomUniqueNames(object):
     def __init__(self, limit=10, length=15):
