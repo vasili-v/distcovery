@@ -11,7 +11,8 @@ reload(distcovery.importer)
 
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package, walk
-from distcovery.importer import _MODULE_NAME_PREFIX, _enumerate_testmodules, \
+from distcovery.importer import _MODULE_NAME_PREFIX, _CASE_NAME_PREFIX, \
+                                _enumerate_testmodules, _enumerate_testcases, \
                                 RandomUniqueNames, Importer
 
 class TestImporterGlobal(unittest.TestCase):
@@ -28,6 +29,35 @@ class TestImporterGlobal(unittest.TestCase):
 
         self.assertEqual(set(_enumerate_testmodules(global_section)),
                          set([test1, test2, test3]))
+
+    def test__enumerate_testcases(self):
+        test_module = imp.new_module('test1')
+        test_module.__file__ = '<test package>'
+        test_module.__path__ = []
+        sys.modules['test1'] = test_module
+
+        exec('import unittest\n' \
+             'class A(unittest.TestCase):\n' \
+             '    pass\n' \
+             'class B(unittest.TestCase):\n' \
+             '    pass\n' \
+             'class C(object):\n' \
+             '    pass\n' \
+             'class D:\n' \
+             '    pass\n' \
+             'c = C()\n', test_module.__dict__)
+
+        global_section = {_MODULE_NAME_PREFIX + '1': test_module}
+
+        testnames = set()
+        testcases = set()
+        for testname, testcase in _enumerate_testcases(global_section):
+            testnames.add(testname)
+            testcases.add(testcase.__name__)
+
+        self.assertEqual(testnames, set([_CASE_NAME_PREFIX + '1',
+                                         _CASE_NAME_PREFIX + '2']))
+        self.assertEqual(testcases, set(['A', 'B']))
 
 class TestRandomUniqueNames(unittest.TestCase):
     def test_creation(self):

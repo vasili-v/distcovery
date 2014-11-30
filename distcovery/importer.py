@@ -2,6 +2,8 @@ import random
 import sys
 import imp
 import re
+import inspect
+import unittest
 
 from distcovery.exceptions import NoMoreAttempts
 from distcovery.path import Package
@@ -11,10 +13,21 @@ _IMPORT_MODULE_LINE = 'import %%s as %s%%d\n' % _MODULE_NAME_PREFIX
 _MODULE_NAME_REGEX = '%s\\d+$' % _MODULE_NAME_PREFIX
 _MODULE_NAME_PATTERN = re.compile(_MODULE_NAME_REGEX)
 
+_CASE_NAME_PREFIX = 'TestCase'
+_CASE_NAME_TEMPLATE = '%s%%d' % _CASE_NAME_PREFIX
+
 def _enumerate_testmodules(global_section):
     for name, item in global_section.iteritems():
         if isinstance(item, type(sys)) and _MODULE_NAME_PATTERN.match(name):
             yield item
+
+def _enumerate_testcases(global_section):
+    index = 0
+    for module in _enumerate_testmodules(global_section):
+        for item in module.__dict__.itervalues():
+            if inspect.isclass(item) and issubclass(item, unittest.TestCase):
+                index += 1
+                yield _CASE_NAME_TEMPLATE % index, item
 
 class RandomUniqueNames(object):
     def __init__(self, limit=10, length=15):
