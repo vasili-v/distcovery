@@ -7,18 +7,20 @@ from distutils import log
 from distutils.cmd import Command
 from distutils.dist import Distribution
 
-from utils import mock_directory_tree, PreserveOs
+from utils import mock_directory_tree, PreserveOs, ImportTrash
 
 # Reload module to run its global section under coverage supervision
 import distcovery.test
 reload(distcovery.test)
+import distcovery.importer
+reload(distcovery.importer)
 
 from distcovery.exceptions import NoTestModulesException, \
                                   UnknownModulesException
 from distcovery.path import Package
 from distcovery.test import Test
 
-class TestTest(PreserveOs, unittest.TestCase):
+class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
     def setUp(self):
         super(TestTest, self).setUp()
 
@@ -94,6 +96,17 @@ class TestTest(PreserveOs, unittest.TestCase):
             content[alias] = importable.str_name()
         self.assertEqual(content, self.expected_content)
 
+    def test_register_importer(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.collect_tests()
+        test.register_importer()
+        self.assertTrue(hasattr(test, 'importer'))
+        self.meta_path_trash.append(test.importer)
+        self.assertIn(test.importer, sys.meta_path)
+
     def test_print_test_package(self):
         self.full_test_tree()
 
@@ -119,6 +132,8 @@ class TestTest(PreserveOs, unittest.TestCase):
         test = Test(Distribution())
         test.test_root = '.'
         test.collect_tests()
+        test.register_importer()
+        self.meta_path_trash.append(test.importer)
         modules = ['first_unknown', 'third_unknown', 'fourth_unknown']
         with self.assertRaises(UnknownModulesException) as ctx:
             test.validate_modules(modules + ['second', 'first'])
@@ -134,7 +149,25 @@ class TestTest(PreserveOs, unittest.TestCase):
         test = Test(Distribution())
         test.test_root = '.'
         test.collect_tests()
-        test.validate_modules(['second', 'first'])
+        test.register_importer()
+        self.meta_path_trash.append(test.importer)
+        test.validate_modules(['second', 'first', '*'])
+
+    def test_map_module(self):
+        self.full_test_tree()
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.collect_tests()
+        test.register_importer()
+        self.meta_path_trash.append(test.importer)
+
+        self.assertRegexpMatches(test.map_module('*'), '^X_\\d+$')
+        self.assertRegexpMatches(test.map_module('sub_first'), '^X_\\d+$')
+
+        self.assertEqual(test.map_module('second'), 'test_second')
+        self.assertEqual(test.map_module('sub_third.sub_second.sub_first'),
+                         'test_sub_third.test_sub_second.test_sub_first')
 
     def test_run_print_test_package(self):
         self.full_test_tree()

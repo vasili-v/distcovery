@@ -8,6 +8,7 @@ from distcovery.exceptions import NoTestModulesException, \
                                   UnknownModulesException
 from distcovery.path import walk
 from distcovery.coverage_wrapper import Coverage
+from distcovery.importer import Importer
 
 class Test(Command):
     description = 'run tests for the package'
@@ -23,6 +24,10 @@ class Test(Command):
         self.test_package = walk(self.test_root)
         if not self.test_package.content:
             raise NoTestModulesException(self.test_root)
+
+    def register_importer(self):
+        self.importer = Importer(self.test_package)
+        sys.meta_path.append(self.importer)
 
     def print_test_package(self):
         log.info('Test suites:')
@@ -40,12 +45,20 @@ class Test(Command):
                                    ('install_purelib', 'coverage_base'))
 
     def validate_modules(self, modules):
-        modules = set(modules) - set(self.test_package.content.keys())
+        modules = set(modules) - set(self.importer.aliases.keys() + \
+                                     self.test_package.content.keys())
         if modules:
             raise UnknownModulesException(list(modules))
 
+    def map_module(self, module):
+        if module in self.importer.aliases:
+            return self.importer.aliases[module]
+
+        return self.test_package.content[module].str_name()
+
     def run(self):
         self.collect_tests()
+        self.register_importer()
 
         if self.module:
             modules = [item.strip() for item in self.module.split(',')]
@@ -58,9 +71,10 @@ class Test(Command):
                             self.distribution)
 
         for module in modules:
+            module = self.map_module(module)
+
             with coverage:
-                unittest.main(self.test_package.content[module].str_name(),
-                              argv=sys.argv[:1], exit=False,
+                unittest.main(module, argv=sys.argv[:1], exit=False,
                               verbosity=self.verbose)
 
         coverage.report()

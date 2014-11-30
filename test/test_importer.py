@@ -67,11 +67,11 @@ class TestRandomUniqueNames(unittest.TestCase):
 
     def test_random_name(self):
         random_unique_names = RandomUniqueNames()
-        self.assertTrue(re.match('X_\\d+$', random_unique_names.random_name()))
+        self.assertRegexpMatches(random_unique_names.random_name(), '^X_\\d+$')
 
     def test_new(self):
         random_unique_names = RandomUniqueNames()
-        self.assertTrue(re.match('X_\\d+$', random_unique_names.new()))
+        self.assertRegexpMatches(random_unique_names.new(), '^X_\\d+$')
 
     def test_new_big_set(self):
         random_unique_names = RandomUniqueNames(limit=10000, length=2)
