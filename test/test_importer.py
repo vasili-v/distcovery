@@ -3,7 +3,7 @@ import re
 import sys
 import imp
 
-from utils import PreserveOs
+from utils import PreserveOs, ImportTrash
 
 # Reload module to run its global section under coverage supervision
 import distcovery.importer
@@ -15,7 +15,7 @@ from distcovery.importer import _MODULE_NAME_PREFIX, _CASE_NAME_PREFIX, \
                                 _enumerate_testmodules, _enumerate_testcases, \
                                 RandomUniqueNames, Importer
 
-class TestImporterGlobal(unittest.TestCase):
+class TestImporterGlobal(ImportTrash, unittest.TestCase):
     def test__enumerate_testmodules(self):
         test1 = imp.new_module('test1')
         test2 = imp.new_module('test2')
@@ -35,6 +35,7 @@ class TestImporterGlobal(unittest.TestCase):
         test_module.__file__ = '<test package>'
         test_module.__path__ = []
         sys.modules['test1'] = test_module
+        self.modules_trash.append('test1')
 
         exec('import unittest\n' \
              'class A(unittest.TestCase):\n' \
@@ -98,11 +99,7 @@ class TestRandomUniqueNames(unittest.TestCase):
                           'length': 2,
                           'length_suffix': NoMoreAttempts.number_suffix(2)})
 
-class TestImporter(PreserveOs, unittest.TestCase):
-    def tearDown(self):
-        if 'test01' in sys.modules:
-            del sys.modules['test01']
-
+class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
     def __assert_source(self, source, *expected_modules):
         regex = 'import\\s(.*)\\sas\\s%s\\d+$' % re.escape(_MODULE_NAME_PREFIX)
         pattern = re.compile(regex)
@@ -172,6 +169,7 @@ class TestImporter(PreserveOs, unittest.TestCase):
     def test_load_module(self):
         importer = Importer(Package(('test', 'base'), 'test'))
         importer.sources['test01'] = 'test = 1\n'
+        self.modules_trash.append('test01')
 
         test01 = importer.load_module('test01')
         self.assertIsInstance(test01, type(sys))
@@ -195,9 +193,29 @@ class TestImporter(PreserveOs, unittest.TestCase):
 
     def test_load_module_already_loaded(self):
         sys.modules['test01'] = 'test01'
+        self.modules_trash.append('test01')
 
         importer = Importer(Package(('test', 'base'), 'test'))
         self.assertEqual(importer.load_module('test01'), 'test01')
+
+    def test_load_module_global_testcase(self):
+        importer = Importer(Package(('test', 'base'), 'test'))
+        importer.sources['test01'] = 'import test02 as %s1\n' % _MODULE_NAME_PREFIX
+        importer.sources['test02'] = 'import unittest\n' \
+                                     'class Test(unittest.TestCase):\n' \
+                                     '    pass\n'
+
+        sys.meta_path.append(importer)
+        self.meta_path_trash.append(importer)
+
+        test01 = importer.load_module('test01')
+
+        testname = _CASE_NAME_PREFIX + '1'
+        self.assertIn(testname, test01.__dict__)
+
+        testcase = test01.__dict__[testname]
+        self.assertTrue(issubclass(testcase, unittest.TestCase))
+        self.assertEqual(testcase.__name__, 'Test')
 
 if __name__ == '__main__':
     unittest.main()

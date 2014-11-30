@@ -1,5 +1,6 @@
 import os
 import errno
+import sys
 
 def mock_directory_tree(tree):
     tree = dict([(os.path.join(*key), value) \
@@ -90,4 +91,18 @@ class PreserveOs(object):
                                  'sub_third.sub_second.sub_first': \
                                      'test_sub_third.test_sub_second.' \
                                      'test_sub_first'}
+
+class ImportTrash(object):
+    def setUp(self):
+        self.modules_trash = []
+        self.meta_path_trash = []
+
+    def tearDown(self):
+        for item in self.meta_path_trash:
+            if item in sys.meta_path:
+                sys.meta_path.remove(item)
+
+        for name in self.modules_trash:
+            if name in sys.modules:
+                del sys.modules[name]
 

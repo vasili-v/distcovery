@@ -100,5 +100,7 @@ class Importer(object):
             del sys.modules[fullname]
             raise
 
+        module.__dict__.update(list(_enumerate_testcases(module.__dict__)))
+
         return module
 
