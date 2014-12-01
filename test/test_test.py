@@ -52,7 +52,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         self.assertTrue(isinstance(test, Test))
         self.assertEqual(test.module, None)
         self.assertEqual(test.coverage_base, None)
-        self.assertEqual(test.coverage, None)
+        self.assertEqual(test.no_coverage, None)
         self.assertEqual(test.test_root, 'test')
         self.assertEqual(test.list, None)
 
@@ -201,6 +201,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test = Test(Distribution())
         test.test_root = '.'
         test.module = 'first'
+        test.no_coverage = True
         test.run()
 
         self.assertEqual(arguments,
@@ -221,6 +222,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test = Test(Distribution())
         test.test_root = '.'
         test.module = None
+        test.no_coverage = True
         test.run()
 
         self.assertEqual(len(arguments), 1, 'Expected 1 set of arguments, ' \

@@ -21,15 +21,15 @@ _NO_COVERAGE_PACKAGE_WARNING = 'Couldn\'t import coverage with error "%s". ' \
                                'Skipping coverage calculations...'
 
 class Coverage(object):
-    def __init__(self, enabled, path, distribution):
-        if enabled:
+    def __init__(self, disabled, path, distribution):
+        if disabled:
+            coverage = _DummyCoverage
+        else:
             try:
                 from coverage import coverage
             except ImportError as error:
                 log.warn(_NO_COVERAGE_PACKAGE_WARNING, error)
                 coverage = _DummyCoverage
-        else:
-            coverage = _DummyCoverage
 
         self.__path = path
 

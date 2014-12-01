@@ -16,10 +16,10 @@ class Test(Command):
     user_options = [('module=', 'm', 'set of test modules to run (several ' \
                                      'modules can be listed using comma)'),
                     ('coverage-base=', None, 'base installation directory'),
-                    ('coverage', 'c', 'calculate test coverage'),
+                    ('no-coverage', None, 'calculate test coverage'),
                     ('list', 'l', 'list test modules')]
 
-    boolean_options = ['coverage', 'list']
+    boolean_options = ['no-coverage', 'list']
 
     def collect_tests(self):
         self.test_package = walk(self.test_root)
@@ -38,7 +38,7 @@ class Test(Command):
     def initialize_options(self):
         self.module = None
         self.coverage_base = None
-        self.coverage = None
+        self.no_coverage = None
         self.list = None
         self.test_root = 'test'
 
@@ -71,7 +71,7 @@ class Test(Command):
         else:
             modules = [None]
 
-        coverage = Coverage(self.coverage, self.coverage_base,
+        coverage = Coverage(self.no_coverage, self.coverage_base,
                             self.distribution)
 
         for module in modules:

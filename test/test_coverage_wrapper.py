@@ -96,13 +96,16 @@ class TestCoverage(unittest.TestCase):
         return self.__import(name, *args)
 
     def test_creation_disabled(self):
-        coverage = Coverage(False, '', _MockDistribution())
+        __builtin__.__import__ = self.__no_coverage_import
+
+        coverage = Coverage(True, '', _MockDistribution())
         self.assertTrue(isinstance(coverage, Coverage))
+        self.assertEqual(self.stderr.getvalue(), '')
 
     def test_creation_no_coverage(self):
         __builtin__.__import__ = self.__no_coverage_import
 
-        coverage = Coverage(True, '', _MockDistribution())
+        coverage = Coverage(False, '', _MockDistribution())
         self.assertTrue(isinstance(coverage, Coverage))
         self.assertEqual(self.stderr.getvalue(),
                          _NO_COVERAGE_PACKAGE_WARNING % 'test' + '\n')
@@ -111,7 +114,7 @@ class TestCoverage(unittest.TestCase):
         self.__coverage = _MockCoverage()
         __builtin__.__import__ = self.__mock_coverage_import
 
-        coverage = Coverage(True, 'test',
+        coverage = Coverage(False, 'test',
                             _MockDistribution(['xxx', 'yyy', 'zzz'],
                                               ['xxx', 'xxx.yyy', 'yyy']))
         self.assertTrue(isinstance(coverage, Coverage))
@@ -128,7 +131,7 @@ class TestCoverage(unittest.TestCase):
 
         first_path = sys.path[0]
         test_path = os.path.join(first_path, 'test')
-        coverage = Coverage(True, test_path, _MockDistribution(['xxx']))
+        coverage = Coverage(False, test_path, _MockDistribution(['xxx']))
 
         self.assertEqual(self.__coverage.starts, 0)
         self.assertEqual(self.__coverage.stops, 0)
@@ -146,13 +149,13 @@ class TestCoverage(unittest.TestCase):
         self.__coverage = _MockCoverage()
         __builtin__.__import__ = self.__mock_coverage_import
 
-        coverage = Coverage(True, 'test', _MockDistribution(['xxx']))
+        coverage = Coverage(False, 'test', _MockDistribution(['xxx']))
         coverage.report()
         self.assertEqual(self.stdout.getvalue(),
                          '\nCoverage report:\n\tThe report\n')
 
     def test_report_coverage_disabled(self):
-        coverage = Coverage(False, '', _MockDistribution())
+        coverage = Coverage(True, '', _MockDistribution())
         coverage.report()
         self.assertEqual(self.stdout.getvalue(), '')
 
