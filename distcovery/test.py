@@ -16,10 +16,9 @@ class Test(Command):
     user_options = [('module=', 'm', 'set of test modules to run (several ' \
                                      'modules can be listed using comma)'),
                     ('coverage-base=', None, 'base installation directory'),
-                    ('no-coverage', None, 'calculate test coverage'),
-                    ('list', 'l', 'list test modules')]
+                    ('no-coverage', None, 'don\'t calculate test coverage')]
 
-    boolean_options = ['no-coverage', 'list']
+    boolean_options = ['no-coverage']
 
     def collect_tests(self):
         self.test_package = walk(self.test_root)
@@ -39,7 +38,6 @@ class Test(Command):
         self.module = None
         self.coverage_base = None
         self.no_coverage = None
-        self.list = None
         self.test_root = 'test'
 
     def finalize_options(self):
@@ -59,7 +57,7 @@ class Test(Command):
 
     def run(self):
         self.collect_tests()
-        if self.list:
+        if self.dry_run:
             self.print_test_package()
             return
 

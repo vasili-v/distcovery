@@ -54,7 +54,6 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         self.assertEqual(test.coverage_base, None)
         self.assertEqual(test.no_coverage, None)
         self.assertEqual(test.test_root, 'test')
-        self.assertEqual(test.list, None)
 
     def test_finalize_options(self):
         test = Test(Distribution())
@@ -175,7 +174,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
-        test.list = True
+        test.dry_run = True
         test.run()
 
         self.assertEqual(self.stdout.getvalue(),
