@@ -60,7 +60,7 @@ class Importer(object):
         self.aliases = {}
         self.sources = {}
 
-        self.build_module('*', package)
+        self.build_module(None, package)
 
     def build_module(self, alias, package):
         name = self.random_unique_names.new()

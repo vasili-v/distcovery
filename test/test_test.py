@@ -54,6 +54,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         self.assertEqual(test.coverage_base, None)
         self.assertEqual(test.coverage, None)
         self.assertEqual(test.test_root, 'test')
+        self.assertEqual(test.list, None)
 
     def test_finalize_options(self):
         test = Test(Distribution())
@@ -151,7 +152,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test.collect_tests()
         test.register_importer()
         self.meta_path_trash.append(test.importer)
-        test.validate_modules(['second', 'first', '*'])
+        test.validate_modules(['second', 'first', 'sub_first'])
 
     def test_map_module(self):
         self.full_test_tree()
@@ -162,7 +163,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test.register_importer()
         self.meta_path_trash.append(test.importer)
 
-        self.assertRegexpMatches(test.map_module('*'), '^X_\\d+$')
+        self.assertRegexpMatches(test.map_module(None), '^X_\\d+$')
         self.assertRegexpMatches(test.map_module('sub_first'), '^X_\\d+$')
 
         self.assertEqual(test.map_module('second'), 'test_second')
@@ -174,6 +175,7 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
 
         test = Test(Distribution())
         test.test_root = '.'
+        test.list = True
         test.run()
 
         self.assertEqual(self.stdout.getvalue(),
@@ -207,6 +209,33 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
                             'exit': False,
                             'verbosity': 1})])
 
+    def test_run_default(self):
+        self.full_test_tree()
+
+        arguments = []
+        def main(*args, **kwargs):
+            arguments.append((args, kwargs))
+
+        unittest.main = main
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.module = None
+        test.run()
+
+        self.assertEqual(len(arguments), 1, 'Expected 1 set of arguments, ' \
+                                            'got %s' % repr(arguments))
+        arguments = arguments[0]
+        self.assertEqual(len(arguments), 2, 'Expected tuple with 2 items, ' \
+                                            'got %s' % repr(arguments))
+        args, kwargs = arguments
+        self.assertEqual(len(args), 1, 'Expected tuple with 1 item, got %s' % \
+                                       repr(args))
+        self.assertRegexpMatches(args[0], '^X_\\d+$')
+
+        self.assertEqual(kwargs, {'argv': sys.argv[:1],
+                                  'exit': False,
+                                  'verbosity': 1})
 if __name__ == '__main__':
     unittest.main()
 

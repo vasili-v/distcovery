@@ -16,9 +16,10 @@ class Test(Command):
     user_options = [('module=', 'm', 'set of test modules to run (several ' \
                                      'modules can be listed using comma)'),
                     ('coverage-base=', None, 'base installation directory'),
-                    ('coverage', 'c', 'calculate test coverage')]
+                    ('coverage', 'c', 'calculate test coverage'),
+                    ('list', 'l', 'list test modules')]
 
-    boolean_options = ['coverage']
+    boolean_options = ['coverage', 'list']
 
     def collect_tests(self):
         self.test_package = walk(self.test_root)
@@ -38,6 +39,7 @@ class Test(Command):
         self.module = None
         self.coverage_base = None
         self.coverage = None
+        self.list = None
         self.test_root = 'test'
 
     def finalize_options(self):
@@ -45,8 +47,7 @@ class Test(Command):
                                    ('install_purelib', 'coverage_base'))
 
     def validate_modules(self, modules):
-        modules = set(modules) - set(self.importer.aliases.keys() + \
-                                     self.test_package.content.keys())
+        modules = set(modules) - set(self.test_package.content.keys())
         if modules:
             raise UnknownModulesException(list(modules))
 
@@ -58,14 +59,17 @@ class Test(Command):
 
     def run(self):
         self.collect_tests()
+        if self.list:
+            self.print_test_package()
+            return
+
         self.register_importer()
 
         if self.module:
             modules = [item.strip() for item in self.module.split(',')]
             self.validate_modules(modules)
         else:
-            self.print_test_package()
-            return
+            modules = [None]
 
         coverage = Coverage(self.coverage, self.coverage_base,
                             self.distribution)

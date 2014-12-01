@@ -119,9 +119,9 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
         importer = Importer(Package(('test', 'base'), 'test'))
 
         self.assertIsInstance(importer, Importer)
-        self.assertEqual(importer.aliases.keys(), ['*'])
+        self.assertEqual(importer.aliases.keys(), [None])
 
-        name = importer.aliases['*']
+        name = importer.aliases[None]
         self.assertRegexpMatches(name, '^X_\\d+$')
         self.assertEquals(importer.sources, {name: ''})
 
@@ -130,10 +130,10 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
 
         importer = Importer(walk('.'))
         self.assertEqual(set(importer.aliases.keys()),
-                         set(('*', 'sub_first', 'sub_third',
+                         set((None, 'sub_first', 'sub_third',
                               'sub_third.sub_second')))
 
-        name = importer.aliases['*']
+        name = importer.aliases[None]
         self.__assert_source(importer.sources[name],
                              'test_first',
                              'test_second',
@@ -158,7 +158,7 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
         self.full_test_tree()
         importer = Importer(walk('.'))
 
-        name = importer.aliases['*']
+        name = importer.aliases[None]
         self.assertEqual(importer.find_module(name), importer)
 
     def test_find_module_non_test_module(self):
