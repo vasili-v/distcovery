@@ -67,11 +67,15 @@ class TestRandomUniqueNames(unittest.TestCase):
 
     def test_random_name(self):
         random_unique_names = RandomUniqueNames()
-        self.assertRegexpMatches(random_unique_names.random_name(), '^X_\\d+$')
+        name = random_unique_names.random_name()
+        self.assertTrue(re.match('X_\\d+$', name),
+                        '"^X_\\d+$" doesn\'t match %s' % repr(name))
 
     def test_new(self):
         random_unique_names = RandomUniqueNames()
-        self.assertRegexpMatches(random_unique_names.new(), '^X_\\d+$')
+        name = random_unique_names.new()
+        self.assertTrue(re.match('X_\\d+$', name),
+                        '"^X_\\d+$" doesn\'t match %s' % repr(name))
 
     def test_new_big_set(self):
         random_unique_names = RandomUniqueNames(limit=10000, length=2)
@@ -79,7 +83,9 @@ class TestRandomUniqueNames(unittest.TestCase):
         names = set()
         for i in range(100):
             name = random_unique_names.new()
-            self.assertNotIn(name, names)
+            self.assertFalse(name in names,
+                             '%s unexpectedly found in %s' % \
+                             (repr(name), repr(names)))
 
             names.add(name)
 
@@ -88,11 +94,17 @@ class TestRandomUniqueNames(unittest.TestCase):
     def test_new_limit(self):
         random_unique_names = RandomUniqueNames(limit=10, length=2)
 
-        with self.assertRaises(NoMoreAttempts) as ctx:
-            for i in range(101):
-                random_unique_names.new()
+        errors = []
+        def raiser():
+            try:
+                for i in range(101):
+                    random_unique_names.new()
+            except NoMoreAttempts as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message,
+        self.assertRaises(NoMoreAttempts, raiser)
+        self.assertEqual(str(errors[0]),
                          NoMoreAttempts.template % \
                          {'limit': 10,
                           'limit_suffix': NoMoreAttempts.number_suffix(10),
@@ -118,11 +130,14 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
     def test_creation(self):
         importer = Importer(Package(('test', 'base'), 'test'))
 
-        self.assertIsInstance(importer, Importer)
+        self.assertTrue(isinstance(importer, Importer),
+                        '%s is not instance of %s' % \
+                        (repr(importer), repr(Importer)))
         self.assertEqual(importer.aliases.keys(), [None])
 
         name = importer.aliases[None]
-        self.assertRegexpMatches(name, '^X_\\d+$')
+        self.assertTrue(re.match('X_\\d+$', name),
+                        '"^X_\\d+$" doesn\'t match %s' % repr(name))
         self.assertEquals(importer.sources, {name: ''})
 
     def test_build_module(self):
@@ -172,12 +187,20 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
         self.modules_trash.append('test01')
 
         test01 = importer.load_module('test01')
-        self.assertIsInstance(test01, type(sys))
-        self.assertIn('test01', sys.modules)
-        self.assertIs(test01, sys.modules['test01'])
+        self.assertTrue(isinstance(test01, type(sys)),
+                        '%s is not instance of %s' % \
+                        (repr(test01), repr(type(sys))))
+        self.assertTrue('test01' in sys.modules, 
+                        '"test01" not found in sys.modules (%s)' % \
+                        repr(sys.modules.keys()))
+        self.assertTrue(test01 is sys.modules['test01'],
+                        '%s is not %s' % \
+                        (repr(test01), repr(sys.modules['test01'])))
         self.assertEqual(test01.__file__, '<test package>')
         self.assertEqual(test01.__path__, [])
-        self.assertIs(test01.__loader__, importer)
+        self.assertTrue(test01.__loader__ is importer,
+                        '%s is not %s' % \
+                        (repr(test01.__loader__), repr(importer)))
         self.assertEqual(test01.__package__, 'test01')
         self.assertEqual(test01.test, 1)
 
@@ -185,11 +208,19 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
         importer = Importer(Package(('test', 'base'), 'test'))
         importer.sources['test01'] = 'raise UserWarning(\'Test!\')\n'
 
-        with self.assertRaises(UserWarning) as ctx:
-            importer.load_module('test01')
+        errors = []
+        def raiser():
+            try:
+                importer.load_module('test01')
+            except UserWarning as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message, 'Test!')
-        self.assertNotIn('test01', sys.modules)
+        self.assertRaises(UserWarning, raiser)
+        self.assertEqual(str(errors[0]), 'Test!')
+        self.assertFalse('test01' in sys.modules,
+                         '"test01" unexpectedly found in sys.modules (%s)' % \
+                         repr(sys.modules.keys()))
 
     def test_load_module_already_loaded(self):
         sys.modules['test01'] = 'test01'
@@ -211,7 +242,9 @@ class TestImporter(ImportTrash, PreserveOs, unittest.TestCase):
         test01 = importer.load_module('test01')
 
         testname = _CASE_NAME_PREFIX + '1'
-        self.assertIn(testname, test01.__dict__)
+        self.assertTrue(testname in test01.__dict__,
+                        '%s not in %s' % \
+                        (repr(testname), repr(test01.__dict__.keys())))
 
         testcase = test01.__dict__[testname]
         self.assertTrue(issubclass(testcase, unittest.TestCase))

@@ -51,10 +51,17 @@ class TestPath(PreserveOs, unittest.TestCase):
     def test__split_path_invalid_root(self):
         tests = os.path.join('1', '2', '3', '4', '5')
         current = os.path.join('a', 'b')
-        with self.assertRaises(InvalidTestRoot) as ctx:
-            _split_path(tests, current)
 
-        self.assertEqual(ctx.exception.message,
+        errors = []
+        def raiser():
+            try:
+                _split_path(tests, current)
+            except InvalidTestRoot as error:
+                errors.append(error)
+                raise
+
+        self.assertRaises(InvalidTestRoot, raiser)
+        self.assertEqual(str(errors[0]),
                          InvalidTestRoot.template % \
                          {'tests': tests, 'current': current})
 

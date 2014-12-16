@@ -107,7 +107,7 @@ class TestCoverage(unittest.TestCase):
 
         coverage = Coverage(False, '', _MockDistribution())
         self.assertTrue(isinstance(coverage, Coverage))
-        self.assertEqual(self.stderr.getvalue(),
+        self.assertEqual(self.stdout.getvalue(),
                          _NO_COVERAGE_PACKAGE_WARNING % 'test' + '\n')
 
     def test_creation(self):

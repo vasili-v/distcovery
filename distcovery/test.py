@@ -10,6 +10,9 @@ from distcovery.path import walk
 from distcovery.coverage_wrapper import Coverage
 from distcovery.importer import Importer
 
+def _nop(*args, **kwargs):
+    pass
+
 class Test(Command):
     description = 'run tests for the package'
 
@@ -72,12 +75,22 @@ class Test(Command):
         coverage = Coverage(self.no_coverage, self.coverage_base,
                             self.distribution)
 
+        argv = sys.argv[:1]
+        if self.verbose < 1:
+            argv += ['-q']
+        elif self.verbose > 1:
+            argv += ['-v']
+
         for module in modules:
             module = self.map_module(module)
 
             with coverage:
-                unittest.main(module, argv=sys.argv[:1], exit=False,
-                              verbosity=self.verbose)
+                sys_exit = sys.exit
+                sys.exit = _nop
+                try:
+                    unittest.main(module, argv=argv)
+                finally:
+                    sys.exit = sys_exit
 
         coverage.report()
 

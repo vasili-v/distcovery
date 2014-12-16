@@ -2,6 +2,7 @@ import unittest
 import os
 import sys
 import StringIO
+import re
 
 from distutils import log
 from distutils.cmd import Command
@@ -18,7 +19,7 @@ reload(distcovery.importer)
 from distcovery.exceptions import NoTestModulesException, \
                                   UnknownModulesException
 from distcovery.path import Package
-from distcovery.test import Test
+from distcovery.test import Test, _nop
 
 class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
     def setUp(self):
@@ -69,16 +70,22 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test = Test(Distribution())
         test.test_root = '.'
 
-        with self.assertRaises(NoTestModulesException) as ctx:
-            test.collect_tests()
+        errors = []
+        def raiser():
+            try:
+                test.collect_tests()
+            except NoTestModulesException as error:
+                errors.append(error)
+                raise
 
+        self.assertRaises(NoTestModulesException, raiser)
         self.assertTrue(hasattr(test, 'test_package'))
         self.assertTrue(isinstance(test.test_package, Package))
         self.assertEqual(test.test_package.modules, [])
         self.assertEqual(test.test_package.packages, [])
         self.assertEqual(test.test_package.content, {})
 
-        self.assertEqual(ctx.exception.message,
+        self.assertEqual(str(errors[0]),
                          NoTestModulesException.template % \
                          {'path': test.test_root})
 
@@ -105,7 +112,9 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test.register_importer()
         self.assertTrue(hasattr(test, 'importer'))
         self.meta_path_trash.append(test.importer)
-        self.assertIn(test.importer, sys.meta_path)
+        self.assertTrue(test.importer in sys.meta_path,
+                        '%s not in sys.meta_path (%s)' % \
+                        (repr(test.importer), repr(sys.meta_path)))
 
     def test_print_test_package(self):
         self.full_test_tree()
@@ -135,11 +144,18 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test.register_importer()
         self.meta_path_trash.append(test.importer)
         modules = ['first_unknown', 'third_unknown', 'fourth_unknown']
-        with self.assertRaises(UnknownModulesException) as ctx:
-            test.validate_modules(modules + ['second', 'first'])
 
+        errors = []
+        def raiser():
+            try:
+                test.validate_modules(modules + ['second', 'first'])
+            except UnknownModulesException as error:
+                errors.append(error)
+                raise
+
+        self.assertRaises(UnknownModulesException, raiser)
         modules, suffix = UnknownModulesException.stringify_list(modules)
-        self.assertEqual(ctx.exception.message,
+        self.assertEqual(str(errors[0]),
                          UnknownModulesException.template % \
                          {'modules': modules, 'suffix': suffix})
 
@@ -162,8 +178,12 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test.register_importer()
         self.meta_path_trash.append(test.importer)
 
-        self.assertRegexpMatches(test.map_module(None), '^X_\\d+$')
-        self.assertRegexpMatches(test.map_module('sub_first'), '^X_\\d+$')
+        module_name = test.map_module(None)
+        self.assertTrue(re.match('X_\\d+$', module_name),
+                        '"^X_\\d+$" doesn\'t match %s' % repr(module_name))
+        module_name = test.map_module('sub_first')
+        self.assertTrue(re.match('X_\\d+$', module_name),
+                        '"^X_\\d+$" doesn\'t match %s' % repr(module_name))
 
         self.assertEqual(test.map_module('second'), 'test_second')
         self.assertEqual(test.map_module('sub_third.sub_second.sub_first'),
@@ -192,7 +212,9 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         self.full_test_tree()
 
         arguments = []
+        nops = []
         def main(*args, **kwargs):
+            nops.append(sys.exit)
             arguments.append((args, kwargs))
 
         unittest.main = main
@@ -203,11 +225,50 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         test.no_coverage = True
         test.run()
 
+        self.assertEqual(nops, [_nop])
         self.assertEqual(arguments,
                          [(('test_first',),
-                           {'argv': sys.argv[:1],
-                            'exit': False,
-                            'verbosity': 1})])
+                           {'argv': sys.argv[:1]})])
+
+    def test_run_verbose(self):
+        self.full_test_tree()
+
+        arguments = []
+        def main(*args, **kwargs):
+            arguments.append((args, kwargs))
+
+        unittest.main = main
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.module = 'first'
+        test.no_coverage = True
+        test.verbose = 2
+        test.run()
+
+        self.assertEqual(arguments,
+                         [(('test_first',),
+                           {'argv': sys.argv[:1] + ['-v']})])
+
+    def test_run_quiet(self):
+        self.full_test_tree()
+
+        arguments = []
+        def main(*args, **kwargs):
+            arguments.append((args, kwargs))
+
+        unittest.main = main
+
+        test = Test(Distribution())
+        test.test_root = '.'
+        test.module = 'first'
+        test.no_coverage = True
+        test.verbose = 0
+        test.run()
+
+        self.assertEqual(arguments,
+                         [(('test_first',),
+                           {'argv': sys.argv[:1] + ['-q']})])
 
     def test_run_default(self):
         self.full_test_tree()
@@ -232,11 +293,10 @@ class TestTest(ImportTrash, PreserveOs, unittest.TestCase):
         args, kwargs = arguments
         self.assertEqual(len(args), 1, 'Expected tuple with 1 item, got %s' % \
                                        repr(args))
-        self.assertRegexpMatches(args[0], '^X_\\d+$')
+        self.assertTrue(re.match('X_\\d+$', args[0]),
+                        '"^X_\\d+$" doesn\'t match %s' % repr(args[0]))
 
-        self.assertEqual(kwargs, {'argv': sys.argv[:1],
-                                  'exit': False,
-                                  'verbosity': 1})
+        self.assertEqual(kwargs, {'argv': sys.argv[:1]})
 if __name__ == '__main__':
     unittest.main()
 

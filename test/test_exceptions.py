@@ -10,34 +10,54 @@ from distcovery.exceptions import DistcoveryException, NoMoreAttempts, \
 
 class TestDistcoveryException(unittest.TestCase):
     def test_raise(self):
-        with self.assertRaises(AttributeError):
+        def raiser():
             raise DistcoveryException()
+
+        self.assertRaises(AttributeError, raiser)
 
     def test_inheritance(self):
         class TestException(DistcoveryException):
             template = '%(xxx)s %(yyy)s %(zzz)s'
 
-        with self.assertRaises(TestException) as ctx:
-            raise TestException(xxx='xxx', yyy='yyy', zzz='zzz')
+        errors = []
+        def raiser():
+            try:
+                raise TestException(xxx='xxx', yyy='yyy', zzz='zzz')
+            except TestException as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message, 'xxx yyy zzz')
+        self.assertRaises(TestException, raiser)
+        self.assertEqual(str(errors[0]), 'xxx yyy zzz')
 
 class TestNoMoreAttempts(unittest.TestCase):
     def test_raise_single_limit(self):
-        with self.assertRaises(NoMoreAttempts) as ctx:
-             raise NoMoreAttempts(1, 5)
+        errors = []
+        def raiser():
+            try:
+                raise NoMoreAttempts(1, 5)
+            except NoMoreAttempts as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message,
+        self.assertRaises(NoMoreAttempts, raiser)
+        self.assertEqual(str(errors[0]),
                          NoMoreAttempts.template % {'limit': 1,
                                                     'limit_suffix': '',
                                                     'length': 5,
                                                     'length_suffix': 's'})
 
     def test_raise_single_length(self):
-        with self.assertRaises(NoMoreAttempts) as ctx:
-             raise NoMoreAttempts(3, 1)
+        errors = []
+        def raiser():
+            try:
+                raise NoMoreAttempts(3, 1)
+            except NoMoreAttempts as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message,
+        self.assertRaises(NoMoreAttempts, raiser)
+        self.assertEqual(str(errors[0]),
                          NoMoreAttempts.template % {'limit': 3,
                                                     'limit_suffix': 's',
                                                     'length': 1,
@@ -51,29 +71,47 @@ class TestNoMoreAttempts(unittest.TestCase):
 
 class TestInvalidTestRoot(unittest.TestCase):
     def test_raise(self):
-        with self.assertRaises(InvalidTestRoot) as ctx:
-            raise InvalidTestRoot('path1', 'path2')
+        errors = []
+        def raiser():
+            try:
+                raise InvalidTestRoot('path1', 'path2')
+            except InvalidTestRoot as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message,
+        self.assertRaises(InvalidTestRoot, raiser)
+        self.assertEqual(str(errors[0]),
                          InvalidTestRoot.template % {'tests': 'path1',
                                                      'current': 'path2'})
 
 class TestNoTestModulesException(unittest.TestCase):
     def test_raise(self):
-        with self.assertRaises(NoTestModulesException) as ctx:
-            raise NoTestModulesException('path')
+        errors = []
+        def raiser():
+            try:
+                raise NoTestModulesException('path')
+            except NoTestModulesException as error:
+                errors.append(error)
+                raise
 
-        self.assertEqual(ctx.exception.message,
+        self.assertRaises(NoTestModulesException, raiser)
+        self.assertEqual(str(errors[0]),
                          NoTestModulesException.template % {'path': 'path'})
 
 class TestUnknownModulesException(unittest.TestCase):
     def test_raise(self):
         modules = ['xxx', 'yyy', 'zzz']
-        with self.assertRaises(UnknownModulesException) as ctx:
-            raise UnknownModulesException(modules)
+        errors = []
+        def raiser():
+            try:
+                raise UnknownModulesException(modules)
+            except UnknownModulesException as error:
+                errors.append(error)
+                raise
 
+        self.assertRaises(UnknownModulesException, raiser)
         modules, suffix = UnknownModulesException.stringify_list(modules)
-        self.assertEqual(ctx.exception.message,
+        self.assertEqual(str(errors[0]),
                          UnknownModulesException.template % \
                          {'modules': modules, 'suffix': suffix})
 
